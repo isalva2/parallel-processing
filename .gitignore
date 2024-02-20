@@ -53,7 +53,7 @@ dkms.conf
 
 # Misc Ignore
 *.DS_Store
-private/
+.private/
 data/
-working/
-chameleon-keys/
+.working/
+.chameleon/
