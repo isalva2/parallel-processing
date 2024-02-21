@@ -164,12 +164,12 @@ $$T_p=\frac{N^3}{p}+\frac{2N^2}{p}+pN^2+pN = \frac{N^3+2N^2+p^2N^2+p^2N}{p}$$
 
 #### Speedup
 We can now compute the theoretical speedup, $s_p$, of the parallelization:
-$$
+```math
 \begin{gather*}
   s_p = \frac{T_s}{T_p}\\
-  = \frac{2N^3+2N^2}{\frac{N^3+2N^2+p^2N^2+p^2N}{p}}\\
-  = \frac{2pN^2(N+1)}{N(N^2+2N+p^2N+p^2)}\\
-  \therefore s_p = \frac{2pN(N+1)}{N^2+2N+p^2N+p^2}
+  = \frac{2N^3+3N^2}{\frac{N^3+2N^2+p^2N^2+p^2N}{p}}\\
+  = \frac{pN(2N^2+3N)}{N(N^2+2N+p^2N+p^2)}\\
+  \therefore s_p = \frac{2pN^2+3pN}{N^2+2N+p^2N+p^2}
 \end{gather*}
-$$
+```
 
