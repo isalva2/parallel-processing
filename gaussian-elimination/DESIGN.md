@@ -74,8 +74,12 @@ We observe the following operations by inspection that contribute to the run tim
 - A middle loop that occurs `N` times and performs two (2) mathematical operation
 - An inner loop that occurs `N` times and performs two (2) mathematical operations
 
-We therefore have a serial run time $T_s$, of
+We therefore we have a serial run time $T_s$, of
 $$T_s=2N^3+2N^2.$$
 
-### Parallel Analysis
+#### Parallel Analysis
+Prior to the derivation of any pseudo-code for parallelization, it is cognizant to obtain any *loop-carried dependence* in the `abstract_gauss()` function by unrolling the inner and middle loop.
 
+**Middle Loop Rollout**
+- `multiplier = A[1][0]/A[0][0];    B[1]-=B[0] * multiplier`
+- `multiplier = A[2][1]/A[1][1];    B[2]-=B[0] * multiplier`
