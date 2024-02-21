@@ -180,7 +180,7 @@ We will now determine if the parallelization as formulated is effective at scale
   \frac{2pN^2+3pN}{N^2+2N+p^2N+p^2} = \frac{1}{\alpha+\frac{1-\alpha}{p}}\\
 \end{gather*}
 ```
-Solving symbolically for $s_p$ with [WolframAlpha](https://www.wolframalpha.com/input?i=Solve%5B(3+p+n+++2+p+n%5E2)/(n%5E2+++2+n+++p%5E2+n+++n%5E2)+%3D%3D+(a+++(1+-+a)/p)%5E(-1),+%7Ba%7D%5D), we see that 
+Solving symbolically for $s_p$ with [WolframAlpha](https://www.wolframalpha.com/), we see that 
 $$\alpha = \frac{p+1}{2n+3},$$
 and that the limit, $\lim_{N\to 0}\alpha=0$, indeed approaches zero. We have theoretically confirmed that the parallelization of the gaussian elimination step is effective.
 
