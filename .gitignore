@@ -57,6 +57,7 @@ dkms.conf
 !.gitignore
 
 # Python
+parallel_processing_env/
 
 # Editors
 .vscode/
