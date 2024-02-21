@@ -54,7 +54,7 @@ dkms.conf
 # Folders
 *.DS_Store
 .*
-!/.gitignore
+!.gitignore
 
 # Python
 
@@ -72,9 +72,6 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
-*.so
 
 # Distribution / packaging
 .Python
