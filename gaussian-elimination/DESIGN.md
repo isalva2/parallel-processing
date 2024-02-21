@@ -184,4 +184,5 @@ Solving symbolically for $s_p$ with [WolframAlpha](https://www.wolframalpha.com/
 $$\alpha = \frac{p+1}{2n+3},$$
 and that the limit, $\lim_{N\to 0}\alpha=0$, indeed approaches zero. We have theoretically confirmed that the parallelization of the gaussian elimination step is effective.
 
-###
+### Discussion
+We can now use speedup and Amdahl's Fraction as metrics for an initial estimate on the theoretical performance of the parallelization design.
