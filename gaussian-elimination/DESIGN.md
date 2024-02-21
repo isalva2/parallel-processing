@@ -70,11 +70,11 @@ void serial_gauss() {
 ```
 **Operation Summary:**
 - An outer loop that iterates `N` times
-- A middle loop that iterates `N` times and performs two (2) mathematical operation
+- A middle loop that iterates `N` times and performs two (3) mathematical operation
 - An inner loop that iterates `N` times and performs two (2) mathematical operations
 
 Therefore, the serial run time, $T_s$, is
-$$T_s=2N^3+2N^2.$$
+$$T_s=2N^3+3N^2.$$
 
 #### Parallel Derivation and Analysis
 Prior to the derivation of any pseudo-code for parallelization, it is cognizant to obtain any *loop-carried dependence* in the `abstract_gauss()` function by unrolling the inner and middle loop.
@@ -168,5 +168,8 @@ $$
 \begin{gather*}
   s_p = \frac{T_s}{T_p}\\
   = \frac{2N^3+2N^2}{\frac{N^3+2N^2+p^2N^2+p^2N}{p}}\\
+  = \frac{2pN^2(N+1)}{N(N^2+2N+p^2N+p^2)}\\
+  \therefore s_p = \frac{2pN(N+1)}{N^2+2N+p^2N+p^2}
 \end{gather*}
 $$
+
