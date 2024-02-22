@@ -220,7 +220,7 @@ void gauss() {
         for (norm = 0; norm < N - 1; norm++)
         {
             /* 2. */
-            #pragma omp for schedule(static)
+            #pragma omp for nowait schedule(dynamic)
             for (row = norm + 1; row < N; row++)
             {
                 multiplier = A[row][norm] / A[norm][norm];
