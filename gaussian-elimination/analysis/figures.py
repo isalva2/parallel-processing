@@ -61,15 +61,15 @@ def draw_figure1() -> None:
                 label=f"Procs = {key.split("_")[-1]}"
             )
     
-    legend1 = ax1.legend(title="Speedup")
-    ax1.add_artist(legend1)
-    legend2 = ax2.legend(title="Efficiency")
-    ax2.add_artist(legend2)
+    # legend1 = ax1.legend(title="Speedup")
+    # ax1.add_artist(legend1)
+    # legend2 = ax2.legend(title="Efficiency")
+    # ax2.add_artist(legend2)
     
     ax1.set_ylabel("speedup")
     ax2.set_ylabel("efficiency")
     ax1.grid(which='both', linestyle='--', linewidth=0.5)
-    plt.show()
+    plt.savefig("./gaussian-elimination/analysis/figures/speedup.png", dpi = 200)
 
 def draw_figure2():
     data = generate_data()
@@ -95,7 +95,8 @@ def draw_figure2():
     
     ax1.set_ylabel("Runtime")
     ax1.grid(which='both', linestyle='-', linewidth=0.5)
-    plt.show()
+    plt.savefig("./gaussian-elimination/analysis/figures/run_time.png", dpi = 200)
 
 if __name__ == "__main__":
+    draw_figure1()
     draw_figure2()
