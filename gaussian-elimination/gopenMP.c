@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 void gauss() {
 
     /* 0. Initialize threads*/
-    int threads = 8;
+    int threads = 2;
 
     int norm, row, col; /* Normalization row, and zeroing
                         * element row and col */
@@ -220,7 +220,7 @@ void gauss() {
         for (norm = 0; norm < N - 1; norm++)
         {
             /* 2. */
-            #pragma omp for private(norm, row, col) 
+            #pragma omp for schedule(static)
             for (row = norm + 1; row < N; row++)
             {
                 multiplier = A[row][norm] / A[norm][norm];
