@@ -14,9 +14,6 @@
 #include <sys/times.h>
 #include <sys/time.h>
 #include <time.h>
-#include <omp.h> //Include omp header file
-
-
 
 /* Program Parameters */
 #define MAXN 2000 /* Max value of N */
@@ -199,39 +196,52 @@ int main(int argc, char **argv)
 /* Provided global variables are MAXN, N, A[][], B[], and X[],
  * defined in the beginning of this code.  X[] is initialized to zeros.
  */
-void gauss()
-{
-    int norm, row, col; /* Normalization row, and zeroing
-                         * element row and col */
-    float multiplier;
 
-    printf("Computing Serially.\n");
 
-    /* Gaussian elimination */
-    for (norm = 0; norm < N - 1; norm++)
+// Include header file
+# include <omp.h>
+
+
+void gauss() {
+
+    /* 0. Initialize threads*/
+    int threads = 8;
+
+    /* 1. Begin OpenMP Parallelization with compiler directive*/
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(multiplier) default(none) 
     {
-        for (row = norm + 1; row < N; row++)
+        int norm, row, col; /* Normalization row, and zeroing
+                            * element row and col */
+        float multiplier;
+
+        printf("Computing in Parallel.\n");
+
+        /* Gaussian elimination */
+        for (norm = 0; norm < N - 1; norm++)
         {
-            multiplier = A[row][norm] / A[norm][norm];
-            for (col = norm; col < N; col++)
+            /* 2. */
+            #pragma omp for schedule(dynamic)
+            for (row = norm + 1; row < N; row++)
             {
-                A[row][col] -= A[norm][col] * multiplier;
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
             }
-            B[row] -= B[norm] * multiplier;
         }
-    }
-    /* (Diagonal elements are not normalized to 1.  This is treated in back
-     * substitution.)
-     */
 
-    /* Back substitution */
-    for (row = N - 1; row >= 0; row--)
-    {
-        X[row] = B[row];
-        for (col = N - 1; col > row; col--)
+        /* (Diagonal elements are not normalized to 1.  This is treated in back substitution.)*/
+        /* Back substitution */
+        for (row = N - 1; row >= 0; row--)
         {
-            X[row] -= A[row][col] * X[col];
+            X[row] = B[row];
+            for (col = N - 1; col > row; col--)
+            {
+                X[row] -= A[row][col] * X[col];
+            }
+            X[row] /= A[row][row];
         }
-        X[row] /= A[row][row];
     }
 }
