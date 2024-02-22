@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 
 
 // Include header file
-# include <omp.h>
+#include <omp.h>
 
 
 void gauss() {
@@ -208,7 +208,7 @@ void gauss() {
     int threads = 8;
 
     /* 1. Begin OpenMP Parallelization with compiler directive*/
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(multiplier) default(none) 
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) default(none) 
     {
         int norm, row, col; /* Normalization row, and zeroing
                             * element row and col */
