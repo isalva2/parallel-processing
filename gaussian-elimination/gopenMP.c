@@ -207,20 +207,20 @@ void gauss() {
     /* 0. Initialize threads*/
     int threads = 8;
 
-    /* 1. Begin OpenMP Parallelization with compiler directive*/
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X) default(none) 
-    {
-        int norm, row, col; /* Normalization row, and zeroing
-                            * element row and col */
-        float multiplier;
+    int norm, row, col; /* Normalization row, and zeroing
+                        * element row and col */
+    float multiplier;
+    printf("Computing in Parallel.\n");
 
-        printf("Computing in Parallel.\n");
+    /* 1. Begin OpenMP Parallelization with compiler directive*/
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier) default(none) 
+    {
 
         /* Gaussian elimination */
         for (norm = 0; norm < N - 1; norm++)
         {
             /* 2. */
-            #pragma omp for schedule(dynamic)
+            #pragma omp for private(norm, row, col) 
             for (row = norm + 1; row < N; row++)
             {
                 multiplier = A[row][norm] / A[norm][norm];
