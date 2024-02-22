@@ -55,6 +55,7 @@ dkms.conf
 *.DS_Store
 .*
 !.gitignore
+chameleon/
 
 # Python
 parallel_processing_env/
