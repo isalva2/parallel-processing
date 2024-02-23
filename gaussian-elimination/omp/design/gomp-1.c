@@ -207,7 +207,7 @@ void gauss()
     float multiplier;
 
     // 1.2 Specify number of threads
-    int threads = 32;
+    int threads = 128;
 
     printf("Computing in Parallel.\n");
 
@@ -218,11 +218,9 @@ void gauss()
 	// 2.1 Log number of processors and threads used by OpenMP
 	#pragma omp single nowait
 	{
-	    int num_procs = omp_get_num_procs();
-	    int num_threads = omp_get_num_threads();
-	    printf("Processors: %d\n", num_procs);
-	    printf("Threads: %d\n", num_threads);
-	{	
+	int num_threads = omp_get_num_threads();
+	printf("Threads: %d\n", num_threads);
+	}	
 		
         for (norm = 0; norm < N - 1; norm++)
         {
