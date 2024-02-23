@@ -207,13 +207,23 @@ void gauss()
     float multiplier;
 
     // 1.2 Specify number of threads
-    int threads = 8;
+    int threads = 32;
 
     printf("Computing in Parallel.\n");
 
     // 2. Begin parallel region for the scope of the gaussian-elimination step
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier)
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X, threads) private(norm, row, col, multiplier)
     {
+		
+	// 2.1 Log number of processors and threads used by OpenMP
+	#pragma omp single nowait
+	{
+	    int num_procs = omp_get_num_procs();
+	    int num_threads = omp_get_num_threads();
+	    printf("Processors: %d\n", num_procs);
+	    printf("Threads: %d\n", num_threads);
+	{	
+		
         for (norm = 0; norm < N - 1; norm++)
         {
             // 3. Begin parallel directive
