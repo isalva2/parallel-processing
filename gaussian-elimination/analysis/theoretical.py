@@ -21,6 +21,7 @@ def generate_data() -> dict:
     for n in data["N"]:
         tp = [parallel_time(n, proc) for proc in data["procs"]]
         data[f"tp_N={n}"] = tp
+    data["str_procs"] = [str(proc) for proc in data["procs"]]
     return data
 
 def draw_figure() -> None:
@@ -31,18 +32,19 @@ def draw_figure() -> None:
     for key in data.keys():
         if key.startswith("tp_"):
             ax1.plot(
-                data["procs"],
+                data["str_procs"],
                 data[key],
                 label=f"N = {key.split("=")[-1]}",
                 marker = "^"
             )
     
     ax1.legend()
-    # ax1.set_xscale("log", base = 2)
+    ax1.set_yscale("log", base = 2)
     ax1.set_ylabel("Operations")
     ax1.set_xlabel("Processors")
     ax1.grid(which='both', linestyle='-', linewidth=0.5)
     plt.savefig("./figures/parallel-runtime.png", dpi = 200)
-
+    plt.show()
+    
 if __name__ == "__main__":
     draw_figure()
