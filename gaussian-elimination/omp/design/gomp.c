@@ -16,7 +16,7 @@
 #include <time.h>
 
 /* Program Parameters */
-#define MAXN 2000 /* Max value of N */
+#define MAXN 20000 /* Max value of N */
 int N;            /* Matrix size */
 
 /* Matrices and vectors */
@@ -69,7 +69,7 @@ void parameters(int argc, char **argv)
     else
     {
         printf("Usage: %s <matrix_dimension> [random seed]\n",
-        argv[0]);
+               argv[0]);
         exit(0);
     }
 
@@ -169,20 +169,20 @@ int main(int argc, char **argv)
 
     /* Display timing results */
     printf("\nElapsed time = %g ms.\n",
-            (float)(usecstop - usecstart) / (float)1000);
+           (float)(usecstop - usecstart) / (float)1000);
 
     printf("(CPU times are accurate to the nearest %g ms)\n",
            1.0 / (float)CLOCKS_PER_SEC * 1000.0);
     printf("My total CPU time for parent = %g ms.\n",
-            (float)((cputstop.tms_utime + cputstop.tms_stime) -
-                    (cputstart.tms_utime + cputstart.tms_stime)) /
+           (float)((cputstop.tms_utime + cputstop.tms_stime) -
+                   (cputstart.tms_utime + cputstart.tms_stime)) /
                (float)CLOCKS_PER_SEC * 1000);
     printf("My system CPU time for parent = %g ms.\n",
-            (float)(cputstop.tms_stime - cputstart.tms_stime) /
+           (float)(cputstop.tms_stime - cputstart.tms_stime) /
                (float)CLOCKS_PER_SEC * 1000);
     printf("My total CPU time for child processes = %g ms.\n",
-            (float)((cputstop.tms_cutime + cputstop.tms_cstime) -
-                    (cputstart.tms_cutime + cputstart.tms_cstime)) /
+           (float)((cputstop.tms_cutime + cputstop.tms_cstime) -
+                   (cputstart.tms_cutime + cputstart.tms_cstime)) /
                (float)CLOCKS_PER_SEC * 1000);
     /* Contrary to the man pages, this appears not to include the parent */
     printf("--------------------------------------------\n");
@@ -197,23 +197,22 @@ int main(int argc, char **argv)
  * defined in the beginning of this code.  X[] is initialized to zeros.
  */
 
-
 // Include header file
-#include <omp.h>
+// #include <omp.h>
 
-
-void gauss() {
+void gauss()
+{
 
     /* 0. Initialize threads*/
     int threads = 2;
 
     int norm, row, col; /* Normalization row, and zeroing
-                        * element row and col */
+                         * element row and col */
     float multiplier;
     printf("Computing in Parallel.\n");
 
     /* 1. Begin OpenMP Parallelization with compiler directive*/
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier) default(none) 
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier) default(none)
     {
 
         /* Gaussian elimination */
@@ -231,17 +230,17 @@ void gauss() {
                 B[row] -= B[norm] * multiplier;
             }
         }
+    }
 
-        /* (Diagonal elements are not normalized to 1.  This is treated in back substitution.)*/
-        /* Back substitution */
-        for (row = N - 1; row >= 0; row--)
+    /* (Diagonal elements are not normalized to 1.  This is treated in back substitution.)*/
+    /* Back substitution */
+    for (row = N - 1; row >= 0; row--)
+    {
+        X[row] = B[row];
+        for (col = N - 1; col > row; col--)
         {
-            X[row] = B[row];
-            for (col = N - 1; col > row; col--)
-            {
-                X[row] -= A[row][col] * X[col];
-            }
-            X[row] /= A[row][row];
+            X[row] -= A[row][col] * X[col];
         }
+        X[row] /= A[row][row];
     }
 }
