@@ -196,32 +196,40 @@ int main(int argc, char **argv)
 /* Provided global variables are MAXN, N, A[][], B[], and X[],
  * defined in the beginning of this code.  X[] is initialized to zeros.
  */
+
+// 1. Include header file
+#include <omp.h>
+
 void gauss()
 {
-    int norm, row, col; /* Normalization row, and zeroing
-                         * element row and col */
+    // 1.1 Instantiate private variables for loop indexing
+    int norm, row, col; 
     float multiplier;
 
-    printf("Computing Serially.\n");
+    // 1.2 Specify number of threads
+    int threads = 8;
 
-    /* Gaussian elimination */
-    for (norm = 0; norm < N - 1; norm++)
+    printf("Computing in Parallel.\n");
+
+    // 2. Begin parallel region for the scope of the gaussian-elimination step
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier)
     {
-        for (row = norm + 1; row < N; row++)
+        for (norm = 0; norm < N - 1; norm++)
         {
-            multiplier = A[row][norm] / A[norm][norm];
-            for (col = norm; col < N; col++)
+            // 3. Begin parallel directive
+            #pragma omp for
+            for (row = norm + 1; row < N; row++)
             {
-                A[row][col] -= A[norm][col] * multiplier;
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
             }
-            B[row] -= B[norm] * multiplier;
         }
     }
-    /* (Diagonal elements are not normalized to 1.  This is treated in back
-     * substitution.)
-     */
-
-    /* Back substitution */
+    /* Back substitution (NOT SUBJECT TO PARALLELIZATION)*/
     for (row = N - 1; row >= 0; row--)
     {
         X[row] = B[row];

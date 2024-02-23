@@ -134,3 +134,45 @@ The design and experimentation environment for this experiment was a virtual ins
 
 ### 3.1 Initial Design in `OpenMP`
 Parallelization design began with implementing the source code `gauss.c` with `OpenMP`, a directive-based parallel programming model. The initial design consisted of only minor modifications to the source code in the form of compiler directives.
+```c
+// 1. Include header file
+#include <omp.h>
+
+void gauss()
+{
+
+    int norm, row, col; 
+    float multiplier;
+
+    printf("Computing in Parallel.\n");
+
+    // 2. Begin parallel region for the scope of the gaussian-elimination step
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier)
+    {
+        for (norm = 0; norm < N - 1; norm++)
+        {
+            // 3. Begin parallel directive
+            #pragma omp for
+            for (row = norm + 1; row < N; row++)
+            {
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
+            }
+        }
+    }
+    /* Back substitution (NOT SUBJECT TO PARALLELIZATION)*/
+    for (row = N - 1; row >= 0; row--)
+    {
+        X[row] = B[row];
+        for (col = N - 1; col > row; col--)
+        {
+            X[row] -= A[row][col] * X[col];
+        }
+        X[row] /= A[row][row];
+    }
+}
+```

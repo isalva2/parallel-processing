@@ -197,29 +197,27 @@ int main(int argc, char **argv)
  * defined in the beginning of this code.  X[] is initialized to zeros.
  */
 
-// Include header file
-// #include <omp.h>
+// 1. Include header file
+#include <omp.h>
 
 void gauss()
 {
-
-    /* 0. Initialize threads*/
-    int threads = 2;
-
-    int norm, row, col; /* Normalization row, and zeroing
-                         * element row and col */
+    // 1.1 Instantiate private variables for loop indexing
+    int norm, row, col; 
     float multiplier;
+
+    // 1.2 Specify number of threads
+    int threads = 8;
+
     printf("Computing in Parallel.\n");
 
-    /* 1. Begin OpenMP Parallelization with compiler directive*/
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier) default(none)
+    // 2. Begin parallel region for the scope of the gaussian-elimination step
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier)
     {
-
-        /* Gaussian elimination */
         for (norm = 0; norm < N - 1; norm++)
         {
-            /* 2. */
-            #pragma omp for nowait schedule(dynamic)
+            // 3. Begin parallel directive
+            #pragma omp for
             for (row = norm + 1; row < N; row++)
             {
                 multiplier = A[row][norm] / A[norm][norm];
@@ -231,9 +229,7 @@ void gauss()
             }
         }
     }
-
-    /* (Diagonal elements are not normalized to 1.  This is treated in back substitution.)*/
-    /* Back substitution */
+    /* Back substitution (NOT SUBJECT TO PARALLELIZATION)*/
     for (row = N - 1; row >= 0; row--)
     {
         X[row] = B[row];

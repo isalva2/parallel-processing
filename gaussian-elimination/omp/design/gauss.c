@@ -16,7 +16,7 @@
 #include <time.h>
 
 /* Program Parameters */
-#define MAXN 20000 /* Max value of N */
+#define MAXN 2000 /* Max value of N */
 int N;            /* Matrix size */
 
 /* Matrices and vectors */
