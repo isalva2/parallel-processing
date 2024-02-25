@@ -40,8 +40,8 @@ def draw_figure() -> None:
     
     ax1.legend()
     ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), title="Workload")
-    ax1.set_yscale("log", base = 2)
-    ax1.set_ylabel("Operations")
+    ax1.set_yscale("log", base = 10)
+    ax1.set_ylabel("log(Operations)")
     ax1.set_xlabel("Processors")
     ax1.grid(which='both', linestyle='-', linewidth=0.5)
     plt.savefig("./figures/parallel-runtime.png", dpi = 200, bbox_inches="tight")

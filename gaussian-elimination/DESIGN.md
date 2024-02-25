@@ -128,28 +128,42 @@ We will now determine if the parallelization as formulated is effective at scale
 ### 2.2 Discussion
 The results of the theoretical speedup and scalability analysis implies that an idealized parallelization of the gaussian elimination function would result in a *linear* speedup with perfect efficiency, such that all work can be effectively parallelized. In addition to speedup, another pertinent metric to discuss is runtime, for various processor, $p$, and workload $N$, cases. The below figure illustrates the hypothetical $T_p$ for $p\in [1,\text{ }128]$ and $N\in[100,\text{ }5{,}000]$.
 
-<img src="/gaussian-elimination/analysis/figures/experiment1.png" alt="MarineGEO circle logo"/>
+<img src="/gaussian-elimination/analysis/figures/parallel-runtime.png">
+
+Theoretically, a log-linear relationship exists between the number of processors and operation runtime exists, such that runtime proportionally decreases with the number of processors used. Whether that be the case in practice is subject to experimental consideration.
 
 ## 3. Design
 The design and experimentation environment for this experiment was a virtual instance CentOS 8 hosted by [Chameleon Cloud](https://www.chameleoncloud.org/). The instance was physically hosted by a Dell PowerEdge R740 compute node on the Chameleon Cluster, with access to two (2) Intel® Xeon® Gold 6126 Processors.
 
 ### 3.1 Initial Design in `OpenMP`
-Parallelization design began with implementing the source code `gauss.c` with `OpenMP`, a directive-based parallel programming model. The initial design consisted of only minor modifications to the source code in the form of compiler directives.
+Parallelization design began with implementing the source code `gauss.c` with `OpenMP`, a directive-based parallel programming model. The initial design consisted of modifications to the source code in the form of compiler directives and minimal changes to the source code.
+
 ```c
 // 1. Include header file
 #include <omp.h>
 
 void gauss()
 {
-
+    // 1.1 Instantiate private variables for loop indexing
     int norm, row, col; 
     float multiplier;
+
+    // 1.2 Specify number of threads
+    int threads = 8;
 
     printf("Computing in Parallel.\n");
 
     // 2. Begin parallel region for the scope of the gaussian-elimination step
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X) private(norm, row, col, multiplier)
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X, threads) private(norm, row, col, multiplier) default(none)
     {
+		
+	// 2.1 Log number of processors and threads used by OpenMP
+	#pragma omp single nowait
+	{
+	int num_threads = omp_get_num_threads();
+	printf("Threads: %d\n", num_threads);
+	}	
+		
         for (norm = 0; norm < N - 1; norm++)
         {
             // 3. Begin parallel directive
@@ -177,3 +191,13 @@ void gauss()
     }
 }
 ```
+This parallelization includes the following steps:
+- **1.0:** The header line `#include <omp.h>` points the compiler towards `OpenMP`
+- **1.1:** Variables `norm, row, col, multiplier` are instantiated for loop indexing and operations
+- **1.2:** The number of `threads` are specified for parallelization
+- **2.0:** The scope of the parallel region is defined using the directive `#pragma omp parallel num_threads(threads) shared(N, A, B, X, threads) private(norm, row, col, multiplier) default(none)`. This directive includes the prefix to denote shared variables related to the computation of the gaussian-elimination step, and private variables for individual thread processes.
+- **2.1:** The `#pragma omp single nowait` directive was used for debugging purposes, to confirm that the number of specified threads are active using the program printout. The `nowait` clause allows for one thread to perform the `single` section and the rest of the threads to proceed to the rest of the parallel region.
+- **3.0** The parallel directive `#pragma omp for` specifies the beginning of parallel directive at the middle loop.
+
+### 3.2 Design Validation
+
