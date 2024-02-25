@@ -126,8 +126,9 @@ We will now determine if the parallelization as formulated is effective at scale
 \end{gather*}
 ```
 ### 2.2 Discussion
-The results of the theoretical speedup and scalability analysis implies that an idealized parallelization of the gaussian elimination function would result in a *linear* speedup with perfect efficiency, such that all work can be effectively parallelized. In addition to speedup, another pertinent metric to discuss is runtime, for various processor, $p$, and workload $N$, cases. The below figure illustrates the hypothetical $T_p$ for $p\in [1,\text{ }128]$ and $N\in[100,\text{ }20{,}000]$.
+The results of the theoretical speedup and scalability analysis implies that an idealized parallelization of the gaussian elimination function would result in a *linear* speedup with perfect efficiency, such that all work can be effectively parallelized. In addition to speedup, another pertinent metric to discuss is runtime, for various processor, $p$, and workload $N$, cases. The below figure illustrates the hypothetical $T_p$ for $p\in [1,\text{ }128]$ and $N\in[100,\text{ }5{,}000]$.
 
+<img src="/gaussian-elimination/analysis/figures/experiment1.png" alt="MarineGEO circle logo"/>
 
 ## 3. Design
 The design and experimentation environment for this experiment was a virtual instance CentOS 8 hosted by [Chameleon Cloud](https://www.chameleoncloud.org/). The instance was physically hosted by a Dell PowerEdge R740 compute node on the Chameleon Cluster, with access to two (2) Intel® Xeon® Gold 6126 Processors.
