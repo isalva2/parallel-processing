@@ -136,7 +136,7 @@ Theoretically, a log-linear relationship exists between the number of processors
 The design and experimentation environment for this experiment was a virtual instance CentOS 8 hosted by [Chameleon Cloud](https://www.chameleoncloud.org/). The instance was physically hosted by a Dell PowerEdge R740 compute node on the Chameleon Cluster, with access to two (2) Intel® Xeon® Gold 6126 Processors.
 
 ### 3.1 Initial Design in `OpenMP`
-Parallelization design began with implementing the source code `gauss.c` with `OpenMP`, a directive-based parallel programming model. The initial design consisted of modifications to the source code in the form of compiler directives and minimal changes to the source code.
+Parallelization design began with implementing the source code `gauss.c` with `OpenMP`, a directive-based parallel programming model. The initial design `gauss-parallel.c` consisted of modifications to the source code in the form of compiler directives and minimal changes to the source code.
 
 ```c
 // 1. Include header file
@@ -149,7 +149,7 @@ void gauss()
     float multiplier;
 
     // 1.2 Specify number of threads
-    int threads = 8;
+    int threads = 2;
 
     printf("Computing in Parallel.\n");
 
@@ -200,4 +200,19 @@ This parallelization includes the following steps:
 - **3.0** The parallel directive `#pragma omp for` specifies the beginning of parallel directive at the middle loop.
 
 ### 3.2 Design Validation
+The parallelized version, `gauss-parallel.c`, was compared against the original source code for computational correctness. The source code `gauss.c` was compiled using the command `gcc -o gauss.out gauss.c`. The generated executable was run with the parameters `N=10` and `seed=2` with the command `./gauss.c 10 2` to obtain initial reproducible results for comparison.
+
+Similarly, the parallelized version was compiled with the command `gcc -o gauss-parallel.out -fopenmp gauss-parllel.c`. The flag `-fopenmp` directs the compiler to use `OpenMP` when generating the executable. The parallelization was evaluated against the serial source code with the command `./gauss-parallel.out 10 2` and both programs resulted in the same identical results for `X`:
+```
+Program Printout:
+X = [ 0.97; -0.94;  0.93;  0.29; -1.09;  0.35; -1.45; -0.57;  1.79;  1.36]
+```
+This initial validation confirmed that validity of the initial `OpenMP` parallelization design, and each future iteration of parallelization was validated this way.
+
+### 3.3 Initial Experimental Results
+The parallelized `OpenMP` program was ran for a number of threads `threads` and workload size `N` for `threads` for values identical to the theoretical analysis in section **2.2**.
+
+<img src="/gaussian-elimination/analysis/figures/experiment1.png">
+
+The results of this experiment showed similar behavior to the theoretical for all workloads for a number of threads between $[1,8]$, with 
 
