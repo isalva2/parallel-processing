@@ -241,9 +241,9 @@ void gauss()
     for (norm = 0; norm < N - 1; norm++)
     {
         int *arg = malloc(sizeof(*arg));
-
         *arg = norm;
-        pthread_create(&thread[norm], NULL, gauss_helper, arg);
+
+        pthread_create(&thread[norm % thread_count], NULL, gauss_helper, arg);
     
     }
 
