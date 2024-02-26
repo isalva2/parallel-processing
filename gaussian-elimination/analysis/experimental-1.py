@@ -62,15 +62,13 @@ def draw_figure2():
     ax1.legend()
     ax1.grid(which='both', linestyle='-', linewidth=0.5)
     ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), title="Workload") 
-    ax1.set_ylim(0,14)
-    ax1.set_xlim(1,65)
-    custom_ticks = [0, 1, 2, 4, 8, 16, 32, 64]
+    ax1.set_ylim(0, 20)
+    ax1.set_xlim(1,129)
+    custom_ticks = [1, 2, 4, 8, 16, 32, 64, 128]
     ax1.set_xticks(custom_ticks)
     ax1.set_ylabel("Speedup")
     ax1.set_xlabel("Threads")
     plt.savefig("./figures/experiment1-sp.png", dpi = 200, bbox_inches="tight")
-    print(data)
-    
     # plt.show()
 
 def draw_figure3():
@@ -89,7 +87,7 @@ def draw_figure3():
             ax1.plot(
                 data["Threads"],
                 data[sp],
-                label = f"N={key}",
+                label = f"Initial N={key}",
                 color = "gray",
                 marker = markers[i-1],
                 markersize = 3.0,
@@ -109,24 +107,35 @@ def draw_figure3():
     
     data2 = pd.read_csv("./data/data2.csv", header=0)
     
+    data2["sp_2000"] = data2["2000"].iloc[0]/data2["2000"]
+    data2["sp_5000"] = data2["5000"].iloc[0]/data2["5000"]
+    
     ax1.plot(
         data2["Threads"],
-        data2["2000"],
-        color = "Green",
-        marker = "x"
+        data2["sp_2000"],
+        marker = "x",
+        label = "Optimized N=2000"
     )
+    
+    ax1.plot(
+        data2["Threads"],
+        data2["sp_5000"],
+        marker = "x",
+        label = "Optimized N=5000"
+    )
+    
     
     ax1.legend()
     ax1.grid(which='both', linestyle='-', linewidth=0.5)
     ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), title="Workload") 
-    ax1.set_ylim(0,14)
-    ax1.set_xlim(1,17)
-    custom_ticks = [0, 1, 2, 4, 8, 16,]
+    ax1.set_ylim(0,25)
+    ax1.set_xlim(1,129)
+    custom_ticks = [1, 4, 8, 16, 32, 64, 128]
     ax1.set_xticks(custom_ticks)
     ax1.set_ylabel("Speedup")
     ax1.set_xlabel("Threads")
     plt.savefig("./figures/experiment2.png", dpi = 200, bbox_inches="tight")
-    
+    print(data2)
     # plt.show()
             
 if __name__ == "__main__":
