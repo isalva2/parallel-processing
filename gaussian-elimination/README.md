@@ -1,0 +1,1 @@
+Please note that the majority of requirements for the README file is encapsulated in the DESIGN file. This file submission is a formality of the homework requirements.

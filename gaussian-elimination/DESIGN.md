@@ -265,25 +265,25 @@ void gauss()
     float multiplier;
 
     // 1.2 Specify number of threads
-    int threads = 2;
+    int threads = 128;
 
     printf("Computing in Parallel.\n");
 
     // 2. Begin parallel region for the scope of the gaussian-elimination step
-    #pragma omp parallel num_threads(threads) shared(N, A, B, X, threads) private(norm, row, col, multiplier) default(none)
+    #pragma omp parallel num_threads(threads) shared(N, A, B) private(norm, row, col, multiplier)
     {
-		
+
 	// 2.1 Log number of processors and threads used by OpenMP
 	#pragma omp single nowait
 	{
 	int num_threads = omp_get_num_threads();
 	printf("Threads: %d\n", num_threads);
 	}	
-		
+
         for (norm = 0; norm < N - 1; norm++)
         {
             // 3. Begin parallel directive
-            #pragma omp for
+            #pragma omp for schedule(dynamic)
             for (row = norm + 1; row < N; row++)
             {
                 multiplier = A[row][norm] / A[norm][norm];
@@ -307,3 +307,12 @@ void gauss()
     }
 }
 ```
+
+Whose main improvement is the dynamic allocation of workload. This results in the below improvement:
+
+<p>
+    <img src="/gaussian-elimination/analysis/figures/experiment2.png">
+    <em>Improved Speedup</em>
+</p>
+
+The proposed optimized design above has additionally been implemented in `pthread` using the command `gcc -lpthread gauss-parallel.c`. Such optimizations resulted in a maximum speedup increase of 21.811461, and increases in performance in the higher range of workloads are expected to be bounded by the new speedup curves.

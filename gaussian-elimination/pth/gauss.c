@@ -198,18 +198,22 @@ int main(int argc, char **argv)
  */
 
 
+// Include pthreads
 #include <pthread.h>
 
+// Define Thread Count
 #define thread_count 5
 
+// Parallel Function
 void *gauss_helper(void *arg)
 {
+    // Point to int for thread distribution
     int norm = *((int *)arg);
 
     int row, col;
     float multiplier;
 
-    /* Gaussian elimination */
+    // Parallelized calculations
     for (norm = 0; norm < N - 1; norm++)
     {
         for (row = norm + 1; row < N; row++)
@@ -222,6 +226,8 @@ void *gauss_helper(void *arg)
             B[row] -= B[norm] * multiplier;
         }
     }
+
+    // Free memory and terminate threads
     free(arg);
     pthread_exit(NULL);
 }
@@ -240,9 +246,11 @@ void gauss()
     /* Gaussian elimination */
     for (norm = 0; norm < N - 1; norm++)
     {
+        // Allocate memory 
         int *arg = malloc(sizeof(*arg));
         *arg = norm;
 
+        // Create Threads and distribute work amongst threads
         pthread_create(&thread[norm % thread_count], NULL, gauss_helper, arg);
     
     }
@@ -255,7 +263,7 @@ void gauss()
      * substitution.)
      */
 
-    /* Back substitution */
+    /* Back substitution NOT SUBJECT TO PARALLELIZATION*/
     for (row = N - 1; row >= 0; row--)
     {
         X[row] = B[row];
