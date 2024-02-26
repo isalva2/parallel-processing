@@ -128,12 +128,27 @@ We will now determine if the parallelization as formulated is effective at scale
 ### 2.2 Discussion
 The results of the theoretical speedup and scalability analysis implies that an idealized parallelization of the gaussian elimination function would result in a *linear* speedup with perfect efficiency, such that all work can be effectively parallelized. In addition to speedup, another pertinent metric to discuss is runtime, for various processor, $p$, and workload $N$, cases. The below figure illustrates the hypothetical $T_p$ for $p\in [1,\text{ }128]$ and $N\in[100,\text{ }5{,}000]$.
 
-<img src="/gaussian-elimination/analysis/figures/parallel-runtime.png">
+<p>
+    <img src="/gaussian-elimination/analysis/figures/parallel-runtime.png">
+    <em>asdf</em>
+</p>
 
 Theoretically, a log-linear relationship exists between the number of processors and operation runtime exists, such that runtime proportionally decreases with the number of processors used. Whether that be the case in practice is subject to experimental consideration.
 
 ## 3. Design
-The design and experimentation environment for this experiment was a virtual instance CentOS 8 hosted by [Chameleon Cloud](https://www.chameleoncloud.org/). The instance was physically hosted by a Dell PowerEdge R740 compute node on the Chameleon Cluster, with access to two (2) Intel® Xeon® Gold 6126 Processors.
+The design and experimentation environment for this experiment was a virtual instance CentOS 8 hosted by [Chameleon Cloud](https://www.chameleoncloud.org/). The instance was physically hosted by a Dell PowerEdge R740 compute node on the Chameleon Cluster, with access to two (2) [Intel® Xeon® Gold 6126](https://www.intel.com/content/www/us/en/products/sku/120483/intel-xeon-gold-6126-processor-19-25m-cache-2-60-ghz/specifications.html) Processors. Intel's website note the following CPU Specifications:
+
+| Parameter                 | Value              |
+|---------------------------|----------------------|
+| Total Cores               | 12                   |
+| Total Threads             | 24                   |
+| Max Turbo Frequency       | 3.70 GHz             |
+| Processor Base Frequency  | 2.60 GHz             |
+| Cache                     | 19.25 MB L3 Cache    |
+| Max # of UPI Links        | 3                    |
+| TDP                       | 125 W                |
+
+
 
 ### 3.1 Initial Design in `OpenMP`
 Parallelization design began with implementing the source code `gauss.c` with `OpenMP`, a directive-based parallel programming model. The initial design `gauss-parallel.c` consisted of modifications to the source code in the form of compiler directives and minimal changes to the source code.
@@ -212,7 +227,29 @@ This initial validation confirmed that validity of the initial `OpenMP` parallel
 ### 3.3 Initial Experimental Results
 The parallelized `OpenMP` program was ran for a number of threads `threads` and workload size `N` for `threads` for values identical to the theoretical analysis in section **2.2**.
 
-<img src="/gaussian-elimination/analysis/figures/experiment1.png">
+<p>
+    <img src="/gaussian-elimination/analysis/figures/experiment1.png">
+    <em>Gaussian-Elimination Runtimes for Workload-Thread Count Cases</em>
+</p>
 
-The results of this experiment showed similar behavior to the theoretical for all workloads for a number of threads between $[1,8]$, with 
+The results of this experiment differed from the theoretical analysis and two regimes emerged with respect to runtime, workload, and thread count. For workloads $N\in[500,\text{ }2{,}000]$, runtime decreased with thread count up to 16 threads, plateaued in runtime up to 32 threads, and actually **increased** in runtime up to 128 threads. This can most likely be attributed to when thread count is is over 32, thread management overhead is costly enough to detriment performance.
 
+The second regime is for the upper range of workloads $N\in[500,\text{ }2{,}000]$, whose runtime similarly decreased up to 16 threads, then plateaued for thread counts between 16 to 128. This plateau in performance suggests that at larger workloads there is significant sequential operations that can not be minimized (possibly the back substitution step), or similar to the previous regime, thread management overhead creates significant runtime. There is also the possibility the performance behavior at higher workloads may actually follow the first regime at higher thread counts, but due to the time costs of evaluation and the scope of this experimentation this was not further explored.
+
+The consequences of thread management overhead are especially visible in the smallest workload scenario when $N=100$, where runtime jumps an order of magnitude between 16 and 32 threads. As evident in the CPU summary, since each processor has 24 threads any addition in thread count will result accruing overhead costs. For thread counts above 32, it is most likely the case that thread management overhead creates at minimum 10 milliseconds of additional program runtime.
+
+### 3.4 Performance Evaluation and Design Objectives
+The experimental results in section 3.3 confirm two assumptions that will be used to evaluate parallelization performance and further design objectives. First is that performance generally increases with thread count up to 32 threads. Second is that after 24 threads, additional overhead requires at least 10 milliseconds of runtime. These assumptions essentially dictate an "upper and lower bound" from which we try to optimize runtime for.
+
+With respect to speedup, these bounds are illustrates between the theoretical 1:1 speedup and experimentally recorded speedup:
+
+<p>
+    <img src="/gaussian-elimination/analysis/figures/experiment1-sp.png">
+    <em>Experimentally Recorded Speedup</em>
+</p>
+
+The experimental results indicate proportional speedup for all workloads up to 16 threads, with pronounced decline in speed up with higher thread count. The ideal optimization would therefore be bounded below the theoretical linear speedup and above the recorded data.
+
+With these considerations in mind, optimization will be evaluated for a workload of `N = 1000` under the assumption that performance gains will scale accordingly. Upon final design we will revisit this assumption.
+
+### 3.5 Design Improvements
