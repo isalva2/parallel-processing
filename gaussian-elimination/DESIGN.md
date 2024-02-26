@@ -250,6 +250,60 @@ With respect to speedup, these bounds are illustrates between the theoretical 1:
 
 The experimental results indicate proportional speedup for all workloads up to 16 threads, with pronounced decline in speed up with higher thread count. The ideal optimization would therefore be bounded below the theoretical linear speedup and above the recorded data.
 
-With these considerations in mind, optimization will be evaluated for a workload of `N = 1000` under the assumption that performance gains will scale accordingly. Upon final design we will revisit this assumption.
+With these considerations in mind, optimization will be evaluated for a workload of `N = 200` under the assumption that performance gains will scale accordingly. In addition, Upon final design we will revisit this assumption.
 
 ### 3.5 Design Improvements
+The below design improvements have been made to the original parallelization implementation:
+```c
+// 1. Include header file
+#include <omp.h>
+
+void gauss()
+{
+    // 1.1 Instantiate private variables for loop indexing
+    int norm, row, col; 
+    float multiplier;
+
+    // 1.2 Specify number of threads
+    int threads = 2;
+
+    printf("Computing in Parallel.\n");
+
+    // 2. Begin parallel region for the scope of the gaussian-elimination step
+    #pragma omp parallel num_threads(threads) shared(N, A, B, X, threads) private(norm, row, col, multiplier) default(none)
+    {
+		
+	// 2.1 Log number of processors and threads used by OpenMP
+	#pragma omp single nowait
+	{
+	int num_threads = omp_get_num_threads();
+	printf("Threads: %d\n", num_threads);
+	}	
+		
+        for (norm = 0; norm < N - 1; norm++)
+        {
+            // 3. Begin parallel directive
+            #pragma omp for
+            for (row = norm + 1; row < N; row++)
+            {
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
+            }
+        }
+    }
+    /* Back substitution (NOT SUBJECT TO PARALLELIZATION)*/
+    for (row = N - 1; row >= 0; row--)
+    {
+        X[row] = B[row];
+        for (col = N - 1; col > row; col--)
+        {
+            X[row] -= A[row][col] * X[col];
+        }
+        X[row] /= A[row][row];
+    }
+}
+```
