@@ -73,7 +73,7 @@ On the initiation of a `MPI_Recv()` operation, the destination processor:
 3. Returns to processing the use program
 
 ## Hello World!
-Here's an example of "Hello World!" using MPI:
+Here's an example of "Hello World!" using MPI and the below source code, `Hello-World-MPI.c`:
 
 ```c
 #include <mpi.h>
@@ -99,3 +99,15 @@ This was confusing to me initially, so let's go line-by-line and explain:
 6. `printf("From process %d out of %d, Hello World!\n", myrank, npes);` prints out a hello world statement from each process
 7. `MPI_Finalize();` ends the MPI environment
 
+[&dagger;]: Note that `MPI_Comm_size()` and `MPI_Comm_rank()` are obtained with respect to the **global** communicator `MPI_COMM_WORLD`. A communicator defines the group of processes that can communicate with one another, and as the name implies this communicator encompasses all processes in the MPI environment.
+
+## Compiling with `MPICC`
+Compiling an MPI program is similar to using standard compilers such as `gcc` and `clang`, but instead we make use of the wrapper `mpicc`:
+```bash
+$ mpicc -o Hello-World-MPI Hello-World-MPI.c
+```
+Finally, we can run an MPI program with `mpirun`
+```bash
+$ mpirun -np <npes> Hello-World-MPI
+```
+where `<npes>` specifies the number of processes at runtime.
