@@ -50,6 +50,7 @@ void parameters(int argc, char **argv) {
   /* Read command-line arguments */
   srand(time_seed()); /* Randomize */
 
+<<<<<<< Updated upstream
   if (argc == 3) {
     seed = atoi(argv[2]);
     srand(seed);
@@ -60,6 +61,27 @@ void parameters(int argc, char **argv) {
     if (N < 1 || N > MAXN) {
       printf("N = %i is out of range.\n", N);
       exit(0);
+=======
+    if (argc == 3)
+    {
+        seed = atoi(argv[2]);
+        srand(seed);
+        printf("Random seed = %i\n", seed);
+    }
+    if (argc >= 2)
+    {
+        N = atoi(argv[1]);
+        if (N < 1 || N > MAXN)
+        {
+            printf("N = %i is out of range.\n", N);
+            exit(0);
+        }
+    }
+    else
+    {
+        printf("Usage: %s <matrix_dimension> [random seed]\n", argv[0]);
+        exit(0);
+>>>>>>> Stashed changes
     }
   } else {
     printf("Usage: %s <matrix_dimension> [random seed]\n", argv[0]);
@@ -113,10 +135,18 @@ void print_X() {
   }
 }
 
+<<<<<<< Updated upstream
 int main(int argc, char *argv[]) {
   // this is a test
   /* Gaussian Elimination */
   int numprocs, myrank;
+=======
+int main(int argc, char *argv[])
+{
+    // this is a test
+    /* Gaussian Elimination */
+    int numprocs, myrank;
+>>>>>>> Stashed changes
 
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
