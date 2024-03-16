@@ -21,15 +21,18 @@ Homework 3 MPI Programming
 int N;            /* Matrix size */
 
 /* Matrices and vectors */
-volatile float A[MAXN][MAXN], B[MAXN], X[MAXN];
+float A[MAXN][MAXN], B[MAXN], X[MAXN];
 /* A * X = B, solve for X */
 
 /* MPI variables */
 int numprocs, myid;
 double start_time, stop_time; // get times from MPI routine
+MPI_Request request; 
+MPI_Status status;
 
 /* Prototype */
-void gauss(); 
+void gauss();
+void gauss_mpi();
 
 #pragma endregion
 
@@ -153,7 +156,9 @@ void print_X()
 // print process rank
 void shout()
 {
+    MPI_Barrier(MPI_COMM_WORLD);
     printf("my rank: %d\n", myid);
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void my_A()
@@ -167,7 +172,7 @@ void my_A()
         {
             for (j = 0; j<N; j++)
             {
-                printf("%8.2f\t", A[i][j]);
+                printf("%15.2f\t", A[i][j]);
             }
             printf("\n");
         }
@@ -175,6 +180,35 @@ void my_A()
     }
     printf("End Debug\n");
     printf("--------------------------------------------\n");
+}
+
+void root_A()
+{
+    if (myid == 0)
+    {
+        my_A();
+    }
+}
+
+void debugger()
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid == 0)
+    {
+        printf("\nDEBUGGING\n");
+        printf("--------------------------------------------\n");
+        printf("--------------------------------------------\n");
+    }
+    gauss_mpi();
+    if (myid == 0)
+    {
+        printf("--------------------------------------------\n");
+        printf("--------------------------------------------\n");
+        printf("\nDEBUGGING\n");
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    
 }
 
 # pragma endregion
@@ -193,19 +227,21 @@ int main(int argc, char *argv[])
     if (myid == 0)
     {
         initialize_inputs();
+        print_inputs();
         printf("\nStarting clock.\n");
         start_time = MPI_Wtime();
     }
 
     // Compute Gaussian elimination
-    gauss_mpi();
+    debugger();
 
     // Stop Clock and runtime logging
     if (myid == 0)
     {
         stop_time = MPI_Wtime();
-        printf("Elapsed time = %f seconds\n", stop_time-start_time);
+        printf("Stopped clock.\n");
         print_X();
+        printf("\nElapsed time = %f seconds\n", stop_time-start_time);
     }
     // Exit MPI enviornment
     MPI_Finalize();
@@ -250,6 +286,62 @@ void gauss_source()
 }
 
 void gauss_mpi()
-{   
-    // Broadcast 
+{
+    int i, norm, row, col;
+    float multiplier;
+
+    // synch up processes
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (myid == 0) {
+        printf("Computing in parallel with %d processes.\n", numprocs);
+    }
+
+    // Begin Gaussian Elimination
+    for (norm = 0; norm < N -1; norm ++)
+    {
+        // Try sending A and B to second process
+        
+        // Root does its own part of Gaussian elimination
+        if (myid == 0)
+        {
+            // Static interleaving only for root process
+            for (row = norm + 1; row < N; row += numprocs)
+            {
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
+            }
+
+        }
+        if (myid == 0)
+        {
+            ;
+        }
+        else // Every other process
+        {
+            ; 
+        }
+        // Synch up after each norm
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    // Back substitution
+    if (myid == 0) {
+        for (row = N - 1; row >= 0; row--)
+        {
+            X[row] = B[row];
+            for (col = N - 1; col > row; col--)
+            {
+                X[row] -= A[row][col] * X[col];
+            }
+            X[row] /= A[row][row];
+        }
+    }
+
+    // debug
+    root_A();
 }
