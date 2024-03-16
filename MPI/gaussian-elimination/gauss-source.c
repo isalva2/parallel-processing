@@ -98,7 +98,7 @@ void print_inputs()
 {
     int row, col;
 
-    if (N < 10)
+    if (N <= 10)
     {
         printf("\nA =\n\t");
         for (row = 0; row < N; row++)

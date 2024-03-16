@@ -14,6 +14,8 @@ Homework 3 MPI Programming
 #include <time.h>
 #include <mpi.h>
 
+#pragma region // global variables and prototypes
+
 /* Program Parameters */
 #define MAXN 20000 /* Max value of N */
 int N;            /* Matrix size */
@@ -28,6 +30,10 @@ double start_time, stop_time; // get times from MPI routine
 
 /* Prototype */
 void gauss(); 
+
+#pragma endregion
+
+#pragma region // inputs and initialization
 
 /* returns a seed for srand based on the time */
 unsigned int time_seed()
@@ -107,7 +113,7 @@ void print_inputs()
 {
     int row, col;
 
-    if (N < 10)
+    if (N <= 10)
     {
         printf("\nA =\n\t");
         for (row = 0; row < N; row++)
@@ -139,12 +145,39 @@ void print_X()
     }
 }
 
+#pragma endregion
+
+#pragma region // debugger and helper functions
+
 /* Helper Functions */
 // print process rank
 void shout()
 {
     printf("my rank: %d\n", myid);
 }
+
+void my_A()
+{
+    printf("--------------------------------------------\n");
+    printf("\nDebug Matrix A for process %d\n\n", myid);
+    int i, j;
+    if (N <= 10)
+    {
+        for (i = 0; i<N; i++)
+        {
+            for (j = 0; j<N; j++)
+            {
+                printf("%8.2f\t", A[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+    printf("End Debug\n");
+    printf("--------------------------------------------\n");
+}
+
+# pragma endregion
 
 int main(int argc, char *argv[])
 {
@@ -156,37 +189,29 @@ int main(int argc, char *argv[])
     // Initialize parameters, everyone gets N
     parameters(argc, argv);
 
-    // Start Clock
+    // Initialize inputs and Start Clock 
     if (myid == 0)
     {
         initialize_inputs();
-        printf("Starting clock.\n");
+        printf("\nStarting clock.\n");
         start_time = MPI_Wtime();
     }
 
-    // Barrier after starting clock to sync up processes
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    shout();
-    printf("my N: %d, %f\n", N, start_time);
+    // Compute Gaussian elimination
+    gauss_mpi();
 
     // Stop Clock and runtime logging
     if (myid == 0)
     {
         stop_time = MPI_Wtime();
         printf("Elapsed time = %f seconds\n", stop_time-start_time);
+        print_X();
     }
     // Exit MPI enviornment
     MPI_Finalize();
     exit(0);
 }
 
-/* ------------------ Above Was Provided --------------------- */
-
-/****** You will replace this routine with your own parallel version *******/
-/* Provided global variables are MAXN, N, A[][], B[], and X[],
- * defined in the beginning of this code.  X[] is initialized to zeros.
- */
 void gauss_source()
 {
     int norm, row, col; /* Normalization row, and zeroing
@@ -222,4 +247,9 @@ void gauss_source()
         }
         X[row] /= A[row][row];
     }
+}
+
+void gauss_mpi()
+{   
+    // Broadcast 
 }
