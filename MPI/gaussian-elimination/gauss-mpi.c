@@ -27,8 +27,7 @@ float A[MAXN][MAXN], B[MAXN], X[MAXN];
 /* MPI variables */
 int numprocs, myid;
 double start_time, stop_time; // get times from MPI routine
-MPI_Request request;
-MPI_Status status;
+
 
 /* Prototype */
 void gauss();
@@ -284,10 +283,28 @@ void gauss_source()
     }
 }
 
+/*
+This attempt at parallelization follows these steps
+
+1.  Begin at norm = 0
+2.  MPI Broadcast ALL OF DATA STRUCTURES A and B from root to all other procs
+2.  Begin separate routines for root and other procs
+2a. Root computes there portion of gaussian elimination
+2b. Other procs get rows assigned 
+
+
+
+
+*/
+
+
+
 void gauss_mpi()
 {
     int i, norm, row, col, proc;
     float multiplier;
+    MPI_Request request;
+    MPI_Status status;
 
     // synch up processes
     MPI_Barrier(MPI_COMM_WORLD);
@@ -301,7 +318,7 @@ void gauss_mpi()
     for (norm = 0; norm < N - 1; norm++)
     {
         printf("This has been broadcasted by %d\n", myid);
-        MPI_Bcast(&A[norm], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&A[norm][0], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&B[norm], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
         if (myid == 0) // Root
@@ -314,7 +331,7 @@ void gauss_mpi()
                     printf("We sent row %d\n", row);
                     MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
                     MPI_Wait(&request, &status);
-                    MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &request);
+                    MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
                     MPI_Wait(&request, &status);
                 }
             }
@@ -334,9 +351,9 @@ void gauss_mpi()
             // Receive updated A rows and B elements from other processes
             for (proc = 1; proc < numprocs; proc++)
             {
-                for (row = norm + 1 + myid; row < N; row += numprocs)
+                for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &status);
                     MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &status);
                 }
             }
@@ -348,7 +365,7 @@ void gauss_mpi()
             for (row = norm + 1 + myid; row < N; row += numprocs)
             {
                 MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
-                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &status);
+                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
                 
                 printf("at norm = %d, proc %d recvd row %d from root\n", norm, myid, row);
                 
@@ -360,7 +377,7 @@ void gauss_mpi()
                 B[row] -= B[norm] * multiplier;
 
                 
-                MPI_Isend(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request);
+                MPI_Isend(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
                 MPI_Wait(&request, &status);
                 printf("sending\n");
                 MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
