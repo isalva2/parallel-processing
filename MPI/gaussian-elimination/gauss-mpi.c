@@ -18,7 +18,7 @@ Homework 3 MPI Programming
 
 /* Program Parameters */
 #define MAXN 20000 /* Max value of N */
-int N;            /* Matrix size */
+int N;             /* Matrix size */
 
 /* Matrices and vectors */
 float A[MAXN][MAXN], B[MAXN], X[MAXN];
@@ -27,7 +27,7 @@ float A[MAXN][MAXN], B[MAXN], X[MAXN];
 /* MPI variables */
 int numprocs, myid;
 double start_time, stop_time; // get times from MPI routine
-MPI_Request request; 
+MPI_Request request;
 MPI_Status status;
 
 /* Prototype */
@@ -92,7 +92,6 @@ void parameters(int argc, char *argv[])
         printf("\nMatrix dimension N = %i.\n", N);
     }
 }
-
 
 /* Initialize A and B (and X to 0.0s) */
 void initialize_inputs()
@@ -168,9 +167,9 @@ void my_A()
     int i, j;
     if (N <= 10)
     {
-        for (i = 0; i<N; i++)
+        for (i = 0; i < N; i++)
         {
-            for (j = 0; j<N; j++)
+            for (j = 0; j < N; j++)
             {
                 printf("%15.2f\t", A[i][j]);
             }
@@ -207,23 +206,21 @@ void debugger()
         printf("\nDEBUGGING\n");
     }
     MPI_Barrier(MPI_COMM_WORLD);
-
-    
 }
 
-# pragma endregion
+#pragma endregion
 
 int main(int argc, char *argv[])
 {
     // Initialize MPI environment and num processes and rank
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-    MPI_Comm_rank( MPI_COMM_WORLD , &myid);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
     // Initialize parameters, everyone gets N
     parameters(argc, argv);
 
-    // Initialize inputs and Start Clock 
+    // Initialize inputs and Start Clock
     if (myid == 0)
     {
         initialize_inputs();
@@ -241,7 +238,8 @@ int main(int argc, char *argv[])
         stop_time = MPI_Wtime();
         printf("Stopped clock.\n");
         print_X();
-        printf("\nElapsed time = %f seconds\n", stop_time-start_time);
+        printf("\nElapsed time = %f seconds\n", stop_time - start_time);
+        my_A();
     }
 
     // Exit MPI enviornment
@@ -300,25 +298,31 @@ void gauss_mpi()
     }
 
     // Begin Gaussian Elimination
-    for (norm = 0; norm < N -1; norm ++)
+    for (norm = 0; norm < N - 1; norm++)
     {
-        /*
-        It appears that all computations of Gaussian elimination
-        are contingent on A[norm][norm], the norm-th row of A,
-        and B[norm], which are read-only values in the context
-        of the core operations.
-
-        Let's broadcast A and B such that each broadcast updates
-        each processes copy of A and B. For example,  
-        */
-        MPI_Bcast(&A[norm][0], N*(N-norm), MPI_FLOAT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&B[norm], N-norm, MPI_Float, 0, MPI_COMM_WORLD);
+        printf("This has been broadcasted by %d\n", myid);
+        MPI_Bcast(&A[norm], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&B[norm], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
         if (myid == 0) // Root
         {
+            // Static interleave schedule rows of A to other processes
+            for (proc = 1; proc < numprocs; proc++)
+            {
+                for (row = norm + 1 + proc; row < N; row += numprocs)
+                {
+                    printf("We sent row %d\n", row);
+                    MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
+                    MPI_Wait(&request, &status);
+                    MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &request);
+                    MPI_Wait(&request, &status);
+                }
+            }
+            printf("at norm = %d, root sent A and B\n", norm);
             // Root does its own part of Gaussian elimination
             for (row = norm + 1; row < N; row += numprocs)
             {
+                printf("root worked on row %d\n", row);
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
                 {
@@ -326,28 +330,57 @@ void gauss_mpi()
                 }
                 B[row] -= B[norm] * multiplier;
             }
-
+            printf("Root finished calcs at norm = %d\n", norm);
+            // Receive updated A rows and B elements from other processes
+            for (proc = 1; proc < numprocs; proc++)
+            {
+                for (row = norm + 1 + myid; row < N; row += numprocs)
+                {
+                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &status);
+                }
+            }
+            printf("root recvd\n");
         }
-        if (myid == 1) // Experiment with second process
+        else // Other processes
         {
-            ;
-        }
-        else // Every other process
-        {
-            ; 
-        }
-        
+            // Perform Gaussian elimination
+            for (row = norm + 1 + myid; row < N; row += numprocs)
+            {
+                MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &status);
+                
+                printf("at norm = %d, proc %d recvd row %d from root\n", norm, myid, row);
+                
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
 
-        // okay lets print A from proc 1 every time
+                
+                MPI_Isend(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request);
+                MPI_Wait(&request, &status);
+                printf("sending\n");
+                MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
+                MPI_Wait(&request, &status);
+            }
+        }
+
+        // Synch up
+        MPI_Barrier(MPI_COMM_WORLD);
+        printf("A barrier happened\n");
         if (myid == 1)
         {
-            printf("norm = %d\n", norm);
+            printf("norm = %d", norm);
             my_A();
         }
     }
 
     // Back substitution
-    if (myid == 0) {
+    if (myid == 0)
+    {
         for (row = N - 1; row >= 0; row--)
         {
             X[row] = B[row];
