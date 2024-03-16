@@ -243,6 +243,7 @@ int main(int argc, char *argv[])
         print_X();
         printf("\nElapsed time = %f seconds\n", stop_time-start_time);
     }
+
     // Exit MPI enviornment
     MPI_Finalize();
     exit(0);
@@ -287,25 +288,35 @@ void gauss_source()
 
 void gauss_mpi()
 {
-    int i, norm, row, col;
+    int i, norm, row, col, proc;
     float multiplier;
 
     // synch up processes
     MPI_Barrier(MPI_COMM_WORLD);
 
-    if (myid == 0) {
+    if (myid == 0)
+    {
         printf("Computing in parallel with %d processes.\n", numprocs);
     }
 
     // Begin Gaussian Elimination
     for (norm = 0; norm < N -1; norm ++)
     {
-        // Try sending A and B to second process
-        
-        // Root does its own part of Gaussian elimination
-        if (myid == 0)
+        /*
+        It appears that all computations of Gaussian elimination
+        are contingent on A[norm][norm], the norm-th row of A,
+        and B[norm], which are read-only values in the context
+        of the core operations.
+
+        Let's broadcast A and B such that each broadcast updates
+        each processes copy of A and B. For example,  
+        */
+        MPI_Bcast(&A[norm][0], N*(N-norm), MPI_FLOAT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&B[norm], N-norm, MPI_Float, 0, MPI_COMM_WORLD);
+
+        if (myid == 0) // Root
         {
-            // Static interleaving only for root process
+            // Root does its own part of Gaussian elimination
             for (row = norm + 1; row < N; row += numprocs)
             {
                 multiplier = A[row][norm] / A[norm][norm];
@@ -317,7 +328,7 @@ void gauss_mpi()
             }
 
         }
-        if (myid == 0)
+        if (myid == 1) // Experiment with second process
         {
             ;
         }
@@ -325,8 +336,14 @@ void gauss_mpi()
         {
             ; 
         }
-        // Synch up after each norm
-        MPI_Barrier(MPI_COMM_WORLD);
+        
+
+        // okay lets print A from proc 1 every time
+        if (myid == 1)
+        {
+            printf("norm = %d\n", norm);
+            my_A();
+        }
     }
 
     // Back substitution
@@ -341,7 +358,4 @@ void gauss_mpi()
             X[row] /= A[row][row];
         }
     }
-
-    // debug
-    root_A();
 }
