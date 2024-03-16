@@ -4,7 +4,7 @@ CS566 Parallel Processing
 Homework 3 MPI Programming
 */
 
-#include <stdio.h>
+#include <stdio.h> // Headers
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
@@ -14,7 +14,7 @@ Homework 3 MPI Programming
 #include <time.h>
 #include <mpi.h>
 
-#pragma region // global variables and prototypes
+#pragma region // Global variables and Gauss prototype
 
 /* Program Parameters */
 #define MAXN 20000 /* Max value of N */
@@ -24,14 +24,12 @@ int N;             /* Matrix size */
 float A[MAXN][MAXN], B[MAXN], X[MAXN];
 /* A * X = B, solve for X */
 
+/* Prototype */
+void gauss_mpi();
+
 /* MPI variables */
 int numprocs, myid;
 double start_time, stop_time; // get times from MPI routine
-
-
-/* Prototype */
-void gauss();
-void gauss_mpi();
 
 #pragma endregion
 
@@ -148,69 +146,8 @@ void print_X()
 
 #pragma endregion
 
-#pragma region // debugger and helper functions
-
-/* Helper Functions */
-// print process rank
-void shout()
-{
-    MPI_Barrier(MPI_COMM_WORLD);
-    printf("my rank: %d\n", myid);
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-void my_A()
-{
-    printf("--------------------------------------------\n");
-    printf("\nDebug Matrix A for process %d\n\n", myid);
-    int i, j;
-    if (N <= 10)
-    {
-        for (i = 0; i < N; i++)
-        {
-            for (j = 0; j < N; j++)
-            {
-                printf("%15.2f\t", A[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-    printf("End Debug\n");
-    printf("--------------------------------------------\n");
-}
-
-void root_A()
-{
-    if (myid == 0)
-    {
-        my_A();
-    }
-}
-
-void debugger()
-{
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myid == 0)
-    {
-        printf("\nDEBUGGING\n");
-        printf("--------------------------------------------\n");
-        printf("--------------------------------------------\n");
-    }
-    gauss_mpi();
-    if (myid == 0)
-    {
-        printf("--------------------------------------------\n");
-        printf("--------------------------------------------\n");
-        printf("\nDEBUGGING\n");
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-#pragma endregion
-
 int main(int argc, char *argv[])
-{
+{   
     // Initialize MPI environment and num processes and rank
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -229,7 +166,7 @@ int main(int argc, char *argv[])
     }
 
     // Compute Gaussian elimination
-    debugger();
+    gauss_mpi();
 
     // Stop Clock and runtime logging
     if (myid == 0)
@@ -238,7 +175,6 @@ int main(int argc, char *argv[])
         printf("Stopped clock.\n");
         print_X();
         printf("\nElapsed time = %f seconds\n", stop_time - start_time);
-        my_A();
     }
 
     // Exit MPI enviornment
@@ -246,66 +182,16 @@ int main(int argc, char *argv[])
     exit(0);
 }
 
-void gauss_source()
-{
-    int norm, row, col; /* Normalization row, and zeroing
-                         * element row and col */
-    float multiplier;
-
-    printf("Computing Serially.\n");
-
-    /* Gaussian elimination */
-    for (norm = 0; norm < N - 1; norm++)
-    {
-        for (row = norm + 1; row < N; row++)
-        {
-            multiplier = A[row][norm] / A[norm][norm];
-            for (col = norm; col < N; col++)
-            {
-                A[row][col] -= A[norm][col] * multiplier;
-            }
-            B[row] -= B[norm] * multiplier;
-        }
-    }
-    /* (Diagonal elements are not normalized to 1.  This is treated in back
-     * substitution.)
-     */
-
-    /* Back substitution */
-    for (row = N - 1; row >= 0; row--)
-    {
-        X[row] = B[row];
-        for (col = N - 1; col > row; col--)
-        {
-            X[row] -= A[row][col] * X[col];
-        }
-        X[row] /= A[row][row];
-    }
-}
-
-/*
-This attempt at parallelization follows these steps
-
-1.  Begin at norm = 0
-2.  MPI Broadcast ALL OF DATA STRUCTURES A and B from root to all other procs
-2.  Begin separate routines for root and other procs
-2a. Root computes there portion of gaussian elimination
-2b. Other procs get rows assigned 
-
-
-
-
-*/
-
-
-
+// new gauss_mpi() that utilizes MPI_Waitall() for synching up root sends to workers and worker sends to root
 void gauss_mpi()
 {
-    int i, norm, row, col, proc;
+    int norm, row, col, proc;
     float multiplier;
-    MPI_Request request;
-    MPI_Status status;
 
+    
+    MPI_Request root_request[2], worker_request[2];
+    MPI_Status root_status[2], worker_status[2];
+    
     // synch up processes
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -317,7 +203,6 @@ void gauss_mpi()
     // Begin Gaussian Elimination
     for (norm = 0; norm < N - 1; norm++)
     {
-        printf("This has been broadcasted by %d\n", myid);
         MPI_Bcast(&A[norm][0], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&B[norm], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
@@ -328,18 +213,15 @@ void gauss_mpi()
             {
                 for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    printf("We sent row %d\n", row);
                     MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
                     MPI_Wait(&request, &status);
                     MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
                     MPI_Wait(&request, &status);
                 }
             }
-            printf("at norm = %d, root sent A and B\n", norm);
             // Root does its own part of Gaussian elimination
             for (row = norm + 1; row < N; row += numprocs)
             {
-                printf("root worked on row %d\n", row);
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
                 {
@@ -347,7 +229,6 @@ void gauss_mpi()
                 }
                 B[row] -= B[norm] * multiplier;
             }
-            printf("Root finished calcs at norm = %d\n", norm);
             // Receive updated A rows and B elements from other processes
             for (proc = 1; proc < numprocs; proc++)
             {
@@ -357,17 +238,14 @@ void gauss_mpi()
                     MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &status);
                 }
             }
-            printf("root recvd\n");
         }
-        else // Other processes
+        else // Worker processes
         {
             // Perform Gaussian elimination
             for (row = norm + 1 + myid; row < N; row += numprocs)
             {
                 MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
                 MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
-                
-                printf("at norm = %d, proc %d recvd row %d from root\n", norm, myid, row);
                 
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
@@ -376,26 +254,15 @@ void gauss_mpi()
                 }
                 B[row] -= B[norm] * multiplier;
 
-                
                 MPI_Isend(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
                 MPI_Wait(&request, &status);
-                printf("sending\n");
                 MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
                 MPI_Wait(&request, &status);
             }
         }
-
-        // Synch up
-        MPI_Barrier(MPI_COMM_WORLD);
-        printf("A barrier happened\n");
-        if (myid == 1)
-        {
-            printf("norm = %d", norm);
-            my_A();
-        }
     }
 
-    // Back substitution
+    // Back substitution computer by root
     if (myid == 0)
     {
         for (row = N - 1; row >= 0; row--)
