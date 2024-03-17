@@ -8,13 +8,18 @@ As opposed to parallelization via `OpenMP` or `Pthreads`, the code structure and
 
 Suppose we wish to solve for matrix `A[8][8]` through Gaussian elimination. An MPI solution with four processes would therefore be initialized at `norm = 0` as illustrated in this figure:
 
-<img src="figures/fig1.png" alt="fig1" width = "500" style="display: block; margin: 0 auto"/>
+<p align="center">
+<img src="figures/fig1.png" alt="fig1" width = "500"/>
+</p>
+
 
 In this figure, the first row of `A` and the first element of `B` are **not modified**, but are used to compute the new values of the updated subarea of `A`, and the remaining elements of `B`. Rows of `A` and `B` are computed via **static interleaved scheduling**, where the second row of `A` and the second element of `B` are computed by the root processor, followed by the three other worker processes. Subsequent rows of the subarea are then assigned cyclically for each process, and computations of these rows are not dependent on one another, hence the application of parallelization and MPI.
 
 The Gaussian elimination step repeats for 7 (`N-1`) iterations until an upper-triangular matrix is obtained for `A` and a corresponding updated `B`. This process is readily apparent in the following figure at the third (`norm = 2`) Gaussian elimination iteration:
 
-<img src="figures/fig2.png" alt="fig1" width = "500" style="display: block; margin: 0 auto"/>
+<p align="center">
+<img src="figures/fig2.png" alt="fig1" width = "500"/>
+</p>
 
 Note that static interleaved scheduling is still consistent on this iteration's subarea of `A`, and that the update computation on this subarea are contingent on the third row of `A`.
 
