@@ -8,11 +8,11 @@ As opposed to parallelization via `OpenMP` or `Pthreads`, the code structure and
 
 Suppose we wish to solve for matrix `A[8][8]` through Gaussian elimination. An MPI solution with four processes would therefore be initialized at `norm = 0` as illustrated in this figure:
 
-![fig1](figures/fig1.png)
+<img src="figures/fig1.png" alt="fig1" width = "500"/>
 
 In this figure, the first row of `A` and the first element of `B` are **not modified**, but are used to compute the new values of the updated subarea of `A`, and the remaining elements of `B`. Rows of `A` and `B` are computed via **static interleaving scheduling**, where the second row of `A` and the second element of `B` are computed by the root processor, followed by the three other worker processes. This process repeats for 7 (`N-1`) iterations until an upper-triangular matrix is obtained for `B`. This process is apparent in the following figure at the third (`norm = 2`) iteration of the algorithm.
 
-![fig2](figures/fig2.png)
+<img src="figures/fig1.png" alt="fig1" width = "500"/>
 
 ## Code Structure
 
