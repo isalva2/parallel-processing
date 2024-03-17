@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         printf("--------------------------------------------\n");
     }
 
-    // Exit MPI enviornment
+    // Exit MPI environment
     MPI_Finalize();
     exit(0);
 }
@@ -259,6 +259,9 @@ void gauss_mpi()
             }
         }
     }
+
+    // Barrier before back substitution
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // Back substitution computer by root
     if (myid == 0)
