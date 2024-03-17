@@ -175,6 +175,7 @@ int main(int argc, char *argv[])
         printf("Stopped clock.\n");
         print_X();
         printf("\nElapsed time = %f seconds\n", stop_time - start_time);
+        printf("--------------------------------------------\n");
     }
 
     // Exit MPI enviornment
@@ -189,8 +190,8 @@ void gauss_mpi()
     float multiplier;
 
     
-    MPI_Request root_request[2], worker_request[2];
-    MPI_Status root_status[2], worker_status[2];
+    MPI_Request root_requests[2], worker_requests[2];
+    MPI_Status root_statuses[2], worker_statuses[2];
     
     // synch up processes
     MPI_Barrier(MPI_COMM_WORLD);
@@ -213,10 +214,9 @@ void gauss_mpi()
             {
                 for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
-                    MPI_Wait(&request, &status);
-                    MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
-                    MPI_Wait(&request, &status);
+                    MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &root_requests[0]);
+                    MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &root_requests[1]);
+                    MPI_Waitall(2, root_requests, worker_statuses);
                 }
             }
             // Root does its own part of Gaussian elimination
@@ -234,8 +234,8 @@ void gauss_mpi()
             {
                 for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &status);
-                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &root_statuses[0]);
+                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &root_statuses[1]);
                 }
             }
         }
@@ -244,8 +244,8 @@ void gauss_mpi()
             // Perform Gaussian elimination
             for (row = norm + 1 + myid; row < N; row += numprocs)
             {
-                MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
-                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+                MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &worker_statuses[0]);
+                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &worker_statuses[1]);
                 
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
@@ -254,10 +254,8 @@ void gauss_mpi()
                 }
                 B[row] -= B[norm] * multiplier;
 
-                MPI_Isend(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
-                MPI_Wait(&request, &status);
-                MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &request);
-                MPI_Wait(&request, &status);
+                MPI_Isend(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &worker_requests[0]);
+                MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &worker_requests[1]);
             }
         }
     }
