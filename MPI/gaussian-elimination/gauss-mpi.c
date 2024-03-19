@@ -188,7 +188,6 @@ void gauss_mpi()
 {
     int norm, row, col, proc;
     float multiplier;
-
     
     MPI_Request root_requests[2], worker_requests[2];
     MPI_Status root_statuses[2], worker_statuses[2];
