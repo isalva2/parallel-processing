@@ -255,6 +255,7 @@ void gauss_mpi()
 
                 MPI_Isend(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &worker_requests[0]);
                 MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &worker_requests[1]);
+                MPI_Waitall(2, worker_requests, root_statuses);
             }
         }
     }

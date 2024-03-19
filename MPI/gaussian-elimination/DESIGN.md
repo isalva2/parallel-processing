@@ -267,16 +267,50 @@ There's a lot going on here, so let's break it down into discrete steps:
 1. Function initialization
 2. Outer loop `norm` iteration and broadcasting
 3. Inner loop root process scheduling
-4. Inner loop send/receive communication
-5. Root/worker Gaussian elimination computation
-6. Root/worker data synchronization
-7. Back substitution phase
+4. Gaussian elimination computation and send/receive communication
+5. Back substitution phase
 
 **1. Function Initialization**
 The function begins with the declaration of variables `norm`, `row`, `col`, and `multiplier`, identical to the serial source code. An additional variable `proc` is declared, which will be used for process scheduling.
 
-`MPI_Request` and `MPI_Status` arrays ar then declared for the purposes of interprocess, point-to-point communication. The design choice of array objects wil be discussed in **Part 4.**
+`MPI_Request` and `MPI_Status` arrays are then declared for the purposes of interprocess, point-to-point communication. The design choice of array objects wil be discussed in **Part 3.**
 
 Initialization concludes with the a `MPI_Barrier()` call. This routine serves are the starting point for the Gaussian elimination step and ensures that all processes are synchronized. Note that this is a **collective call** routine, and therefore the global communicator `MPI_COMM_WORLD` is used. In fact, the entire scope of this program solely uses this communicator.
 
 **2. Outer loop `norm` iteration and broadcasting**
+The primary algorithmic steps of Gaussian elimination begin at the outer `norm` loop. This loop begins with two `MPI_Bcast()` calls, one for `A` and `B` respectively. The argument `&A[norm][0]` points to the address of the first element, of the "`norm`-th" row (the `norm=0` the first row), and the second argument `N` specifies the entire first row to be broadcasted. Similarly, the second broadcast call points towards the address of the first element of `B`, and the second argument specifies only the first element.
+
+`MPI_Bcast()` also serves the purposes of an implicit barrier function, such that all processes are synchronized, and store the same values of `A` and `B` for the next outer loop iteration.
+
+**3. Inner loop root process scheduling**
+The inner loop operations consist of two if-else clauses that direct the tasks of the root and worker processes. While the worker processes primarily perform compute tasks, the root process is also responsible for additional scheduling and data movement management tasks. The first part of the root process clause is static interleaved assignment of data from the root process's copies of `A` and `B`.
+
+The data assignment is encapsulated as a double for loop that iterates over all worker processes and there requisite rows/elements of `A` and `B`. The inner control statement `(row = norm + 1 + proc; row < N; row += numprocs)` utilizes the worker process's rank, `proc`, to index the rows that will be assigned to that process.
+
+The `row` variable is then used in conjunction with two `MPI_Isend()` routines to send the necessary parts of `A` and `B` to the worker processes. `MPI_Isend()` was used instead of `MPI_Send()`, due to the non-blocking nature of the routine. This was design choice was made to increase message passing speed, and to allow for `B` to be sent without having to wait for `A`.Both send routines are accompanied by a single `MPI_Waitall()` routine, however initial design for this block is as follows:
+
+```c
+MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
+MPI_Wait(&request, &status);
+MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &request);
+MPI_Wait(&request, &status);
+```
+
+This design, upon further inspection was deemed to be inefficient, as to wait routines would double the blocking time of the current implementation, and would defeat the purpose of using `MPI_Isend()`.
+
+The use of a single wait for two send routines also facilitates the need for an array `MPI_Request` handle. The root process has it's own `root_request` array and complementary `worker_request` array, and the worker processes have similar vice-versa variables for communication back to the root process.
+
+**4. Gaussian elimination computation and send/receive communication**
+This step incorporates the most complex use of MPI so far, and is where the actual Gaussian elimination computations take place. Following point-to-point communication from the root process, two corresponding `MPI_Recv()` for `A` and `B` occur at each worker process. The first three arguments for both receive routines are identical to their `MPI_Isend()` counterparts, and both receive routines utilize the previously declared `MPI_Status` array `worker_statuses`.
+
+The blocking `MPI_Recv()` routine was used for both `A` and `B` to ensure that every worker process has the correct, current copy of the data before computation. With all processes storing the same copy of the data, the actual Gaussian elimination computation can commence.
+
+Following computation, the worker processes transmit their portions of computed `A` and `B` back to the root process in a similar manner as the initial data transmittal from the root process. The transmittal consists of a double for loop, where the process's rank `myid` is used to index the use of `MPI_Isend()`routines. These send routines are then received by the root process, which then updates it's copy of `A` and `B` for the next `norm` iteration.
+
+It is interesting to note that both root and worker tasks exhibit a degree of `symmetry`. Both if-else clauses begin with a send/receive communications, perform calculations, and perform a second, final round of communication.
+
+**5. Back substitution phase**
+After all `norm` iterations are complete, a final `MPI_Barrier()` is called and the root process performs the back substitution step. This step competes the `gauss_mpi()` function which returns to main for final output and termination steps.
+
+## Experimental Results
+
