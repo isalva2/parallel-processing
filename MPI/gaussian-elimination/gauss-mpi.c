@@ -189,9 +189,6 @@ void gauss_mpi()
     int norm, row, col, proc;
     float multiplier;
     
-    MPI_Request root_requests[2], worker_requests[2];
-    MPI_Status root_statuses[2], worker_statuses[2];
-    
     // synch up processes
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -213,9 +210,8 @@ void gauss_mpi()
             {
                 for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    MPI_Isend(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &root_requests[0]);
-                    MPI_Isend(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD, &root_requests[1]);
-                    MPI_Waitall(2, root_requests, worker_statuses);
+                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
             }
             // Root does its own part of Gaussian elimination
@@ -253,9 +249,8 @@ void gauss_mpi()
                 }
                 B[row] -= B[norm] * multiplier;
 
-                MPI_Isend(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &worker_requests[0]);
-                MPI_Isend(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &worker_requests[1]);
-                MPI_Waitall(2, worker_requests, root_statuses);
+                MPI_Send(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD);
+                MPI_Send(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD); 
             }
         }
     }
