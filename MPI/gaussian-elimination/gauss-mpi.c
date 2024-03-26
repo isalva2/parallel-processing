@@ -229,8 +229,8 @@ void gauss_mpi()
             {
                 for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &root_statuses[0]);
-                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, &root_statuses[1]);
+                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
             }
         }
