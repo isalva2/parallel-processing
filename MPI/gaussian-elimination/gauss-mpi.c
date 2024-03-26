@@ -210,8 +210,8 @@ void gauss_mpi()
             {
                 for (row = norm + 1 + proc; row < N; row += numprocs)
                 {
-                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Send(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD); 
+                    MPI_Send(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD);
                 }
             }
             // Root does its own part of Gaussian elimination
@@ -239,8 +239,8 @@ void gauss_mpi()
             // Perform Gaussian elimination
             for (row = norm + 1 + myid; row < N; row += numprocs)
             {
-                MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &worker_statuses[0]);
-                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &worker_statuses[1]);
+                MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
