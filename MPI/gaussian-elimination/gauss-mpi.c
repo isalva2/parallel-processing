@@ -175,8 +175,9 @@ int main(int argc, char *argv[])
     if (myid == 0)
     {
         stop_time = MPI_Wtime();
-        printf("Time for output: \t%f\n", stop_time - stop_calc);
+        // printf("Time for output: \t%f\n", stop_time - stop_calc);
         printf("Stopped clock.\n");
+        print_inputs();
         print_X();
         printf("\nElapsed time = %f seconds\n", stop_time - start_time);
         printf("--------------------------------------------\n");
@@ -201,7 +202,7 @@ void gauss_mpi()
     record(start_sched);
     if (myid == 0)
     {
-        printf("\nTime for input:\t%f\n", stop_sched - start_sched);
+        printf("Time for input:\t%f\n", stop_sched - start_sched);
     }
 
     // Begin static interleaved scheduling by root process
@@ -240,7 +241,7 @@ void gauss_mpi()
     MPI_Bcast(&A[0], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&B[0], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-    // okay this is not working
+    // // okay this is not working
     // if (myid == 0)
     // {
     //     printf("\nCHECKING INITIAL STATIC INTERLEAVED SCHEDULING\n");
@@ -260,26 +261,28 @@ void gauss_mpi()
     //     printf("\nEND CHECK OF INITIAL STATIC INTERLEAVED SCHEDULING\n");
     // }
 
-    // MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // Stop recording scheduling time
     record(stop_sched);
     if (myid == 0)
     {
-        printf("\nTime for static interleaved scheduling:\t%f\n", stop_sched - start_sched);
+        printf("Time for static interleaved scheduling:\t%f\n", stop_sched - start_sched);
     }
-    
-    MPI_Barrier(MPI_COMM_WORLD);
     
     // Begin Gaussian elimination step
     for (norm = 0; norm < N - 1; norm++)
     {
+        // if (myid == 0)
+        // {
+        //     printf("BEGIN DEBUGGING OUPUT FOR NORM = %d\n--------------------------------------------\n", norm);
+        // }
         // New main calc using modulo
         for (row = norm + 1; row < N; row ++)
         {
-            
-            if (myid == (row + 1 + numprocs) % numprocs)
+            if (myid == (row - 1 + numprocs) % numprocs)
             {
+                // printf("I am proc %d and I am working on row %d at norm = %d\n", myid, row, norm);
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
                 {
@@ -294,31 +297,30 @@ void gauss_mpi()
         MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
         MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
 
-        // MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 
-        // debugging
-        // for (int i = 0; i < numprocs; i++)
-        // {
-        //     MPI_Barrier(MPI_COMM_WORLD);
-        //     if (myid == i)
-        //     {
-        //         printf("\nI am proc %d at norm = %d and this is my A:\n", myid, norm);
-        //         print_inputs();
-        //     }
-        //     MPI_Barrier(MPI_COMM_WORLD);
-        // }
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // if (myid == 0)
-        // {
-        //     printf("\nI am proc %d and I broadcasted row %d\n", proc, norm+1);
-        // }
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // if (myid == 0)
-        // {
-        //     printf("\n\nNORM %d ITERATION OVER\n\n", norm);
-        // }
-        // MPI_Barrier(MPI_COMM_WORLD);
-
+    //     // debugging
+    //     for (int i = 0; i < numprocs; i++)
+    //     {
+    //         MPI_Barrier(MPI_COMM_WORLD);
+    //         if (myid == i)
+    //         {
+    //             printf("\nI am proc %d at norm = %d and this is my A:\n", myid, norm);
+    //             print_inputs();
+    //         }
+    //         MPI_Barrier(MPI_COMM_WORLD);
+    //     }
+    //     MPI_Barrier(MPI_COMM_WORLD);
+    //     if (myid == proc)
+    //     {
+    //         printf("\nI am proc %d and I broadcasted row %d\n", proc, norm+1);
+    //     }
+    //     MPI_Barrier(MPI_COMM_WORLD);
+    //     if (myid == 0)
+    //     {
+    //         printf("\n\nNORM %d ITERATION OVER\n--------------------------------------------\n", norm);
+    //     }
+    //     MPI_Barrier(MPI_COMM_WORLD);
     }
 
     // Back substitution computer by root
@@ -334,6 +336,8 @@ void gauss_mpi()
             X[row] /= A[row][row];
         }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // Stop recording Gaussian elimination step
     record(stop_calc);
