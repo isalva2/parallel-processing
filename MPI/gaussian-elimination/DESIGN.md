@@ -151,13 +151,6 @@ void gauss_mpi()
     // Declare request and status arrays
     MPI_Request root_requests[2], worker_requests[2];
     MPI_Status root_statuses[2], worker_statuses[2];
-    
-    // synch up processes
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myid == 0)
-    {
-        printf("Computing in parallel with %d processes.\n", numprocs);
-    }
 
     // Begin Gaussian Elimination
     for (norm = 0; norm < N - 1; norm++)
@@ -303,4 +296,98 @@ For the next design, the following design requirements were subject to considera
 
 1. Communication using MPI routines must be minimized.
 2. Workload scheduling should be **static** and not dynamically assigned during calculation time. This requirement eliminates redundant, costly communication which hampered the initial design.
-3. 
+
+With these requirements in mind, the following, improved, `gauss_mpi()` function was developed:
+
+```c
+void gauss_mpi()
+{
+    // Algorithm variables
+    int norm, row, col, proc;
+    float multiplier;
+
+    // Declare status object for MPI_Recv()
+    MPI_Status status;
+
+    // Begin static interleaved scheduling by root process
+    if (myid == 0) 
+    {
+        for (row = 1; row < N - 1; row ++)
+        {
+            // Static assignment of rows to each worker process
+            proc = row % numprocs;
+            if (proc != 0)
+            {
+                // Send rows of A and corresponding value of B
+                MPI_Send(&A[row + 1][0], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD);
+                MPI_Send(&B[row + 1], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD);
+            }
+            
+        }
+    }
+    // Worker processes receive rows
+    else
+    {
+        for(row = 1; row < N - 1; row++)
+        {   
+            if (myid == row % numprocs)
+            {
+                // Corresponding send and receives
+                MPI_Recv(&A[row + 1][0], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+                MPI_Recv(&B[row + 1], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &status);
+            }
+        }
+    }
+
+    // Broadcast initial 0-th norm row
+    MPI_Bcast(&A[0], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&B[0], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    
+    // Begin Gaussian elimination step
+    for (norm = 0; norm < N - 1; norm++)
+    {
+        // New main calc using modulo
+        for (row = norm + 1; row < N; row ++)
+        {
+            if (myid == (row - 1 + numprocs) % numprocs)
+            {
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
+            }
+        }
+        
+        // norm-th proc broadcasts next, completed, norm + 1 row for next iteration
+        proc = norm % numprocs;
+        MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
+        MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    // Back substitution computer by root
+    if (myid == 0)
+    {
+        for (row = N - 1; row >= 0; row--)
+        {
+            X[row] = B[row];
+            for (col = N - 1; col > row; col--)
+            {
+                X[row] -= A[row][col] * X[col];
+            }
+            X[row] /= A[row][row];
+        }
+    }
+}
+```
+
+Let's go step-by-step through this function:
+
+1. **Function Initialization** Local variables and `MPI_Status` objects are declared similarly to the initial design of `gauss_mpi()`. Since `MPI_Isend()` is not used in this version, a single `MPI_Status` object can be used as opposed to an array.
+2. **Process Scheduling** Assignment of rows is performed in a round-robin fashion, where each row is assigned a processor cyclically using the modulo operator `%` and the number of processes `numprocs`. For each worker process, the root process performs two `MPI_Send()` routines and corresponding `MPI_Recv()` for `A` and `B` respectively. Both send buffers are indexed to the `row+1`*-th* column to account for the initial normalization row at `row = 0`, in essence beginning static scheduling at the second row of `A` where `row = 0`. Assignment concludes with a one-to-all `MPI_Bcast()` of the of the first `norm = 0` row of `A` and `B` for the first iteration of the Gaussian elimination step.
+3. **Gaussian Elimination** The Gaussian elimination step begins at the first `norm` iteration, where rows of `A` are calculated by their respective process. Since the `norm % numproc`*-th* process calculates the row of `A` immediately after the `norm` row, that process then calls two `MPI_Bcast()` routines to send the newly calculated `norm + 1`*-th* row for the subsequent `norm + 1`*-th* iteration.
+
+<br/><br/>

@@ -277,8 +277,6 @@ void gauss_mpi()
         proc = norm % numprocs;
         MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
         MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
-
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     // Back substitution computer by root
@@ -296,7 +294,6 @@ void gauss_mpi()
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
     // Stop recording Gaussian elimination step
     if (myid == 0)
     {
