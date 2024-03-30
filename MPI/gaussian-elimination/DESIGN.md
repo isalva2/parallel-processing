@@ -2,27 +2,6 @@
 
 This document encompasses the design choices made to implement and optimize the Gaussian elimination parallel algorithm using Message Passing Interface (MPI). We will be using the [MPICH](https://www.mpich.org/) implementation and developing/testing on various Unix-like platforms. For information on the development and testing environment for this program, please see the `README` document.
 
-## Algorithm Interpretation
-
-As opposed to parallelization via `OpenMP` or `Pthreads`, the code structure and refactoring for an MPI program is far more explicit and requires a great deal of modification from source. While designing this program, a visualization of a small-scale example helped to gain some initial intuition for the implementation of MPI.
-
-Suppose we wish to solve for matrix `A[8][8]` through Gaussian elimination. An MPI solution with four processes would therefore be initialized at `norm = 0` as illustrated in this figure:
-
-<p align="center">
-<img src="figures/fig1.png" alt="fig1" width = "500"/>
-</p>
-
-
-In this figure, the first row of `A` and the first element of `B` are **not modified**, but are used to compute the new values of the updated subarea of `A`, and the remaining elements of `B`. Rows of `A` and `B` are computed via **static interleaved scheduling**, where the second row of `A` and the second element of `B` are computed by the root processor, followed by the three other worker processes. Subsequent rows of the subarea are then assigned cyclically for each process, and computations of these rows are not dependent on one another, hence the application of parallelization and MPI.
-
-The Gaussian elimination step repeats for 7 (`N-1`) iterations until an upper-triangular matrix is obtained for `A` and a corresponding updated `B`. This process is readily apparent in the following figure at the third (`norm = 2`) Gaussian elimination iteration:
-
-<p align="center">
-<img src="figures/fig2.png" alt="fig1" width = "500"/>
-</p>
-
-Note that static interleaved scheduling is still consistent on this iteration's subarea of `A`, and that the update computation on this subarea are contingent on the third row of `A`.
-
 ## Design Considerations and Requirements
 
 From the analysis of the Gaussian elimination step, we can determine the requirements of implementing MPI for each iteration of the algorithm.
@@ -35,7 +14,7 @@ More formally, for the $i^{th}$ iteration of the algorithm, the following items 
 4. Once all computations by the root and worker processes are completed, the local copy of `A` and `B` stored by the root process must be updated.
 5. After completion of the Gaussian elimination step, the back substitution phase occurs. This phase exhibits $O(N^2)$ time complexity (as opposed to the previous phase's $O(N^3)$ time complexity), and can therefore be computed serially by the root process.
 
-We can now begin matching these requirements to the appropriate MPI routines for robust and mathematically sound implementation.
+We can now begin matching these requirements to the appropriate MPI routines for design implementation.
 
 ## Program Logic and Candidate MPI Routines
 
@@ -47,7 +26,7 @@ We can now begin matching these requirements to the appropriate MPI routines for
 
 ## Code Structure
 
-Please note that code snippets outlined in the rest of this document are paraphrased or adapted from the MPI program `gauss-mpi.c. Please refer to the actual program for further clarification on code structure, logic, implementation of MPI, and additional functionality not discussed in this documentation.
+Please note that code snippets outlined in the rest of this document are paraphrased or adapted from the MPI program `gauss-mpi.c`. Please refer to the actual program for further clarification on code structure, logic, implementation of MPI, and additional functionality not discussed in this documentation.
 
 ### Program Parameters and Global Variables
 
@@ -312,5 +291,16 @@ It is interesting to note that both root and worker tasks exhibit a degree of `s
 **5. Back substitution phase**
 After all `norm` iterations are complete, a final `MPI_Barrier()` is called and the root process performs the back substitution step. This step competes the `gauss_mpi()` function which returns to main for final output and termination steps.
 
-## Experimental Results
+## Revised Design
 
+Upon initial testing of the original `gauss_mpi()` function implementation, the program functioned correctly, and was mathematically equivalent to the serial version. However, at small workloads (`N < 1000`) the program did not appear to exhibit performance gains and at large workloads (`N > 3000`), performance severely degraded and would often hang from deadlock.
+
+At the problem statement workload of `N = 5000`, a rough approximation of the number of messages sent would be for every `norm` iteration, the program will send `2*(N - norm)` messages. For the first iteration that would be 10,000 messages, and a conservative estimate,$\frac{2N(N-1)}{2}$, puts the lower bound of messages sent for this program at 12.5 million send/receive operations.
+
+For context the serial program can perform the computation in approximately 136 seconds. It is apparent that communication costs are impacting performance, and it is imperative that subsequent design versions must minimize communication between processes.
+
+For the next design, the following design requirements were subject to consideration:
+
+1. Communication using MPI routines must be minimized.
+2. Workload scheduling should be **static** and not dynamically assigned during calculation time. This requirement eliminates redundant, costly communication which hampered the initial design.
+3. 

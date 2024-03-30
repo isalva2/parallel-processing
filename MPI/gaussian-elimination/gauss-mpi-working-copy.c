@@ -26,10 +26,16 @@ float A[MAXN][MAXN], B[MAXN], X[MAXN];
 
 /* Prototype */
 void gauss_mpi();
+void record(double time);
 
 /* MPI variables */
 int numprocs, myid;
-double start_time, stop_time; // get times from MPI routine
+
+/* Recording */
+double start_time;
+double start_sched, stop_sched;
+double stop_calc;
+double stop_time;
 
 #pragma endregion
 
@@ -173,8 +179,18 @@ int main(int argc, char *argv[])
     {
         stop_time = MPI_Wtime();
         printf("Stopped clock.\n");
+        print_inputs();
         print_X();
-        printf("\nElapsed time = %f seconds\n", stop_time - start_time);
+
+        // Print run time report
+        double t_sched = stop_sched - start_sched;
+        double t_calc = stop_calc - stop_sched;
+        double t_total = stop_time - start_time;
+        double t_IO = t_total - t_sched - t_calc;
+        printf("Sched time:\t%f seconds\n", t_sched);
+        printf("Calc time:\t%f seconds\n", t_calc);
+        printf("IO time:\t%f seconds\n", t_IO);
+        printf("\nElapsed time:\t%f seconds\n", stop_time - start_time);
         printf("--------------------------------------------\n");
     }
 
@@ -186,36 +202,69 @@ int main(int argc, char *argv[])
 // new gauss_mpi() that utilizes MPI_Waitall() for synching up root sends to workers and worker sends to root
 void gauss_mpi()
 {
+    // Algorithm variables
     int norm, row, col, proc;
     float multiplier;
-    
-    // synch up processes
-    MPI_Barrier(MPI_COMM_WORLD);
 
+    // Declare status object for MPI_Recv()
+    MPI_Status status;
+
+    // Start recording scheduling time:
     if (myid == 0)
     {
-        printf("Computing in parallel with %d processes.\n", numprocs);
+        start_sched = MPI_Wtime();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Begin static interleaved scheduling by root process
+    
+    // Root process Does the scheduling
+    if (myid == 0) 
+    {
+        for (row = 1; row < N - 1; row ++)
+        {
+            // Static assignment of rows to each worker process
+            proc = row % numprocs;
+            if (proc != 0)
+            {
+                // Send rows of A and corresponding value of B
+                MPI_Send(&A[row + 1][0], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD);
+                MPI_Send(&B[row + 1], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD);
+            }
+            
+        }
+    }
+    // Worker processes receive rows
+    else
+    {
+        for(row = 1; row < N - 1; row++)
+        {   
+            if (myid == row % numprocs)
+            {
+                // Corresponding send and receives
+                MPI_Recv(&A[row + 1][0], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+                MPI_Recv(&B[row + 1], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, &status);
+            }
+        }
     }
 
-    // Begin Gaussian Elimination
+    // Broadcast initial 0-th norm row
+    MPI_Bcast(&A[0], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&B[0], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+    // Stop recording scheduling time
+    if (myid == 0)
+    {
+        stop_sched = MPI_Wtime();
+    }
+    
+    // Begin Gaussian elimination step
     for (norm = 0; norm < N - 1; norm++)
     {
-        MPI_Bcast(&A[norm][0], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&B[norm], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-        if (myid == 0) // Root
+        // New main calc using modulo
+        for (row = norm + 1; row < N; row ++)
         {
-            // Static interleave schedule rows of A to other processes
-            for (proc = 1; proc < numprocs; proc++)
-            {
-                for (row = norm + 1 + proc; row < N; row += numprocs)
-                {
-                    MPI_Send(&A[row], N, MPI_FLOAT, proc, 0, MPI_COMM_WORLD); 
-                    MPI_Send(&B[row], 1, MPI_FLOAT, proc, 0, MPI_COMM_WORLD);
-                }
-            }
-            // Root does its own part of Gaussian elimination
-            for (row = norm + 1; row < N; row += numprocs)
+            if (myid == (row - 1 + numprocs) % numprocs)
             {
                 multiplier = A[row][norm] / A[norm][norm];
                 for (col = norm; col < N; col++)
@@ -224,39 +273,15 @@ void gauss_mpi()
                 }
                 B[row] -= B[norm] * multiplier;
             }
-            // Receive updated A rows and B elements from other processes
-            for (proc = 1; proc < numprocs; proc++)
-            {
-                for (row = norm + 1 + proc; row < N; row += numprocs)
-                {
-                    MPI_Recv(&A[row], N, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    MPI_Recv(&B[row], 1, MPI_FLOAT, proc, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                }
-            }
         }
-        else // Worker processes
-        {
-            // Perform Gaussian elimination
-            for (row = norm + 1 + myid; row < N; row += numprocs)
-            {
-                MPI_Recv(&A[row], N, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                MPI_Recv(&B[row], 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                
-                multiplier = A[row][norm] / A[norm][norm];
-                for (col = norm; col < N; col++)
-                {
-                    A[row][col] -= A[norm][col] * multiplier;
-                }
-                B[row] -= B[norm] * multiplier;
+        
+        // norm-th proc broadcasts next, completed, norm + 1 row for next iteration
+        proc = norm % numprocs;
+        MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
+        MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
 
-                MPI_Send(&A[row], N, MPI_FLOAT, 0, 1, MPI_COMM_WORLD);
-                MPI_Send(&B[row], 1, MPI_FLOAT, 0, 1, MPI_COMM_WORLD); 
-            }
-        }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
-
-    // Barrier before back substitution
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // Back substitution computer by root
     if (myid == 0)
@@ -271,4 +296,23 @@ void gauss_mpi()
             X[row] /= A[row][row];
         }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Stop recording Gaussian elimination step
+    if (myid == 0)
+    {
+        stop_calc = MPI_Wtime();
+    }
 }
+
+// Function to record time. Can and should be called outside of if conditional
+void record(double time)
+{   
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid == 0)
+    {
+        time = MPI_Wtime();
+    }
+}
+
