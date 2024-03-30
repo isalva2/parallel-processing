@@ -388,6 +388,11 @@ Let's go step-by-step through this function:
 
 1. **Function Initialization** Local variables and `MPI_Status` objects are declared similarly to the initial design of `gauss_mpi()`. Since `MPI_Isend()` is not used in this version, a single `MPI_Status` object can be used as opposed to an array.
 2. **Process Scheduling** Assignment of rows is performed in a round-robin fashion, where each row is assigned a processor cyclically using the modulo operator `%` and the number of processes `numprocs`. For each worker process, the root process performs two `MPI_Send()` routines and corresponding `MPI_Recv()` for `A` and `B` respectively. Both send buffers are indexed to the `row+1`*-th* column to account for the initial normalization row at `row = 0`, in essence beginning static scheduling at the second row of `A` where `row = 0`. Assignment concludes with a one-to-all `MPI_Bcast()` of the of the first `norm = 0` row of `A` and `B` for the first iteration of the Gaussian elimination step.
-3. **Gaussian Elimination** The Gaussian elimination step begins at the first `norm` iteration, where rows of `A` are calculated by their respective process. Since the `norm % numproc`*-th* process calculates the row of `A` immediately after the `norm` row, that process then calls two `MPI_Bcast()` routines to send the newly calculated `norm + 1`*-th* row for the subsequent `norm + 1`*-th* iteration.
+3. **Gaussian Elimination** The Gaussian elimination step begins at the first `norm` iteration, where rows of `A` are calculated by their respective process. Since the `norm % numproc`*-th* process calculates the row of `A` immediately after the `norm` row, that process then calls two `MPI_Bcast()` routines to send the newly calculated `norm + 1`*-th* row for the subsequent `norm + 1`*-th* iteration. This one-to-all communication per iteration also has the additional benefit of updating the root process's copies of `A` and `B`. This allows for no need for additional communication after the Gaussian elimination step.
+4. **Back Substitution** The root process then completes the calculation by computing the back substitution step, identical to the previous design and the serial version of the algorithm.
 
-<br/><br/>
+## Experimental Results
+
+The parallel MPI program, `gauss-mpi,c`, was then evaluated for performance. In addition to the primary metrics of program runtime $T_p$ and speedup $S_p$, the scheduling and calculation times were recorded to derive additional insight on the behavior of the program.
+
+The program was run on [Chameleon Cloud](https://www.chameleoncloud.org/) on a physical compute node with two Intel(R) Xeon(R) Platinum 8380 CPU's @ 2.30GHz. The node 
