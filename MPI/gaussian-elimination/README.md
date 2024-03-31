@@ -36,7 +36,8 @@ where the `-np` flag allows us to specify the number of`p` processes used, `N` i
 
 ```bash
 $ mpirun -np 3 ./gauss-mpi.out 5 2
-
+```
+```
 Random seed = 2
 
 Matrix dimension N = 5.
