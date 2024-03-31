@@ -21,7 +21,7 @@ At two CPUs per node, the compute environment for this exercise was able to util
 
 ## Compiling and Execution
 
-To compile the parallel program `gauss-mpi.c`, we follow the standard MPICH implementation that uses the `mpicc` command to link the program file to an executable.
+To compile the parallel program [`gauss-mpi.c`](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/gauss-mpi.c), we follow the standard MPICH implementation that uses the `mpicc` command to link the program file to an executable.
 
 ```bash
 $ mpicc -o gauss-mpi.out gauss-mpi.c
@@ -77,4 +77,4 @@ B = [28699.42; -482348576.00; 98706.91; 58424.40; 109941.60]
 
 In addition, for workloads smaller than `N <= 10`, the program output will display inputs `A` and `B` and there row-reduced counterparts following Gaussian elimination.
 
-For convenience, the included shell script [`compile.sh`](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/compile.sh)
+For convenience, the included shell script [`compile-run.sh`](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/compile.sh) will compile and run [`gauss-mpi.c`](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/gauss-mpi.c) as described above. Please make sure to change the file to executable with `chmod +x` before running using `bash compile-run.sh`.

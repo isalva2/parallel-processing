@@ -26,7 +26,7 @@ We can now begin matching these requirements to the appropriate MPI routines for
 
 ## Code Structure
 
-Please note that code snippets outlined in the rest of this document are paraphrased or adapted from the MPI program `gauss-mpi.c`. Please refer to the actual program for further clarification on code structure, logic, implementation of MPI, and additional functionality not discussed in this documentation.
+Please note that code snippets outlined in the rest of this document are paraphrased or adapted from the MPI program [`gauss-mpi.c`](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/gauss-mpi.c). Please refer to the actual program for further clarification on code structure, logic, implementation of MPI, and additional functionality not discussed in this documentation.
 
 ### Program Parameters and Global Variables
 

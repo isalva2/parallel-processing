@@ -2,9 +2,10 @@
 Isaac Salvador
 CS566 Parallel Processing
 Homework 3 MPI Programming
+March 31, 2024
 */
 
-#include <stdio.h> // Headers
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
@@ -14,7 +15,7 @@ Homework 3 MPI Programming
 #include <time.h>
 #include <mpi.h>
 
-#pragma region // Global variables and Gauss prototype
+// Global variables and Gauss prototype
 
 /* Program Parameters */
 #define MAXN 20000 /* Max value of N */
@@ -32,14 +33,12 @@ void record(double time);
 int numprocs, myid;
 
 /* Recording */
-double start_time;
-double start_sched, stop_sched;
-double stop_calc;
-double stop_time;
+double start_time; // Program start time
+double start_sched, stop_sched; // Start/stop interleaved static scheduling
+double stop_calc; // Stop calculation time
+double stop_time; // Stop program runtime
 
-#pragma endregion
-
-#pragma region // inputs and initialization
+// inputs and initialization
 
 /* returns a seed for srand based on the time */
 unsigned int time_seed()
@@ -150,8 +149,6 @@ void print_X()
     }
 }
 
-#pragma endregion
-
 int main(int argc, char *argv[])
 {   
     // Initialize MPI environment and num processes and rank
@@ -190,7 +187,6 @@ int main(int argc, char *argv[])
         stop_time = MPI_Wtime();
         printf("Stopped clock.\n");
 
-
         // Print run time report
         double t_sched = stop_sched - start_sched;
         double t_calc = stop_calc - stop_sched;
@@ -206,15 +202,21 @@ int main(int argc, char *argv[])
     MPI_Barrier(MPI_COMM_WORLD);
     if (myid == 1)
     {
+        /*
+        Print on root 1 process. Due to broadcasting logic 
+        sending `N - norm - 1` rows per norm iteration, the 
+        root 0 process incorrectly DISPLAYS matrix A, although
+        mathematically and functionally this A is still correct.
+        */
         print_inputs();
     }
 
-    // Exit MPI environment
+    // Exit MPI environment and close program
     MPI_Finalize();
     exit(0);
 }
 
-// new gauss_mpi() that utilizes MPI_Waitall() for synching up root sends to workers and worker sends to root
+// Gaussian Elimination using MPI
 void gauss_mpi()
 {
     // Algorithm variables
@@ -230,8 +232,6 @@ void gauss_mpi()
         start_sched = MPI_Wtime();
     }
     MPI_Barrier(MPI_COMM_WORLD);
-
-    // Begin static interleaved scheduling by root process
     
     // Root process Does the scheduling
     if (myid == 0) 
@@ -320,14 +320,3 @@ void gauss_mpi()
         stop_calc = MPI_Wtime();
     }
 }
-
-// Function to record time. Can and should be called outside of if conditional
-void record(double time)
-{   
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myid == 0)
-    {
-        time = MPI_Wtime();
-    }
-}
-
