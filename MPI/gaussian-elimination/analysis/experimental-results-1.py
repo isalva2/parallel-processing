@@ -63,6 +63,8 @@ def draw_figure_2():
     ax.set_xlabel("Processes")
     ax.set_ylabel("Speedup")
     
+    plt.savefig("figures/ex-2.png", dpi = 200)
+    
 def draw_figure_3():
     df = load_data()
     

@@ -447,7 +447,7 @@ Looking at speedup, the program exhibits linear speedup up to 32 processes. In f
 </p>
 <br>
 
-Looking at the full speedup graph up to `p = 180`, the optimized performance at `p = 128` is even more aparent, with an empirical speedup of 53.74, almost 2 times more than the prevailing sub-optimal speedup around 30.
+Looking at the full speedup graph up to `p = 180`, the optimized performance at `p = 128` is even more aparent, with a top speedup of 53.74, almost 2 times more than the prevailing sub-optimal speedup around 30.
 
 ## Optimization
 
