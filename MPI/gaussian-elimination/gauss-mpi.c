@@ -26,6 +26,7 @@ float A[MAXN][MAXN], B[MAXN], X[MAXN];
 
 /* Prototype */
 void gauss_mpi();
+void record(double time);
 
 /* MPI variables */
 int numprocs, myid;
@@ -158,6 +159,16 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
+    // Break on single process
+    if (myid == 0)
+    {
+        if (numprocs < 2)
+        {
+            printf("Not enough p!\nUsage: mpicc -np [processes > 1] %s <matrix_dimension> [random seed]\n", argv[0]);
+            exit(0);
+        }
+    }
+
     // Initialize parameters, everyone gets N
     parameters(argc, argv);
 
@@ -178,8 +189,7 @@ int main(int argc, char *argv[])
     {
         stop_time = MPI_Wtime();
         printf("Stopped clock.\n");
-        print_inputs();
-        print_X();
+
 
         // Print run time report
         double t_sched = stop_sched - start_sched;
@@ -190,7 +200,13 @@ int main(int argc, char *argv[])
         printf("Calc time:\t%f seconds\n", t_calc);
         printf("IO time:\t%f seconds\n", t_IO);
         printf("\nElapsed time:\t%f seconds\n", stop_time - start_time);
+        print_X();
         printf("--------------------------------------------\n");
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid == 1)
+    {
+        print_inputs();
     }
 
     // Exit MPI environment
@@ -198,6 +214,7 @@ int main(int argc, char *argv[])
     exit(0);
 }
 
+// new gauss_mpi() that utilizes MPI_Waitall() for synching up root sends to workers and worker sends to root
 void gauss_mpi()
 {
     // Algorithm variables
@@ -275,8 +292,10 @@ void gauss_mpi()
         
         // norm-th proc broadcasts next, completed, norm + 1 row for next iteration
         proc = norm % numprocs;
-        MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
+        MPI_Bcast(&A[norm+1][norm+1], N - norm - 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
         MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
+
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     // Back substitution computer by root
@@ -294,9 +313,21 @@ void gauss_mpi()
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
+
     // Stop recording Gaussian elimination step
     if (myid == 0)
     {
         stop_calc = MPI_Wtime();
     }
 }
+
+// Function to record time. Can and should be called outside of if conditional
+void record(double time)
+{   
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid == 0)
+    {
+        time = MPI_Wtime();
+    }
+}
+
