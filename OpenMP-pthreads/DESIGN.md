@@ -228,7 +228,7 @@ This initial validation confirmed that validity of the initial `OpenMP` parallel
 The parallelized `OpenMP` program was ran for a number of threads `threads` and workload size `N` for `threads` for values identical to the theoretical analysis in section **2.2**.
 
 <p>
-    <img src="/gaussian-elimination/analysis/figures/experiment1.png">
+    <img src="analysis/figures/experiment1.png">
     <em>Gaussian-Elimination Runtimes for Workload-Thread Count Cases</em>
 </p>
 
@@ -311,7 +311,7 @@ void gauss()
 Whose main improvement is the dynamic allocation of workload. This results in the below improvement:
 
 <p>
-    <img src="/gaussian-elimination/analysis/figures/experiment2.png">
+    <img src="analysis/figures/experiment2.png">
     <em>Improved Speedup</em>
 </p>
 

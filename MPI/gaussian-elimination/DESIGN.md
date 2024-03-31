@@ -432,9 +432,9 @@ As expected, calculation time decreases with an increase in number of processes,
 Another observation is that runtime plateaus at around 4.5 seconds with the exception of the top runtime at `p = 128`, then returning to sub-optimal performance at higher processes count. Additionally (and surprisingly), program executions at `p = 127` and `p = 129` still exhibited sub-optimal performance around 4.5 seconds, a near 2 second difference for +/- an additional process. It is unknown mechanism is contributing to this increase in performance, but an educated guess would be that either the compute node, the version of MPI, or some other combination of hardware and software is specially optimized or accelerated for 128 threads.
 
 <br>
-<center style="text-align:center;">
-    <img src="analysis/figures/ex-2-detail.png" style="width:50%; height:50%;">
-</center>
+<p align="center">
+  <img width="300" height="300" src="analysis/figures/ex-2-detail.png">
+</p>
 <br>
 
 Looking at speedup, the program exhibits linear speedup up to 32 processes. In fact, for processes between 4 and 16, the parallelization exhibited *super-linear* speedup, but could most likely be due to statistical variances on runtime, given how closely the experimental results follow the theoretical linear speedup.
