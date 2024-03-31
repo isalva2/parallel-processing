@@ -425,7 +425,7 @@ Looking at the runtime split of the different phases of the program, it is appar
 
 <br>
 <p align="center">
-  <img width="800" height="480" src="analysis/figures/ex-1.png">
+  <img width="640" height="384" src="analysis/figures/ex-1.png">
 </p>
 <br>
 
@@ -435,7 +435,7 @@ Another observation is that runtime plateaus at around 4.5 seconds with the exce
 
 <br>
 <p align="center">
-  <img width="500" height="500" src="analysis/figures/ex-2-detail.png">
+  <img width="384" height="384" src="analysis/figures/ex-2-detail.png">
 </p>
 <br>
 
@@ -443,7 +443,7 @@ Looking at speedup, the program exhibits linear speedup up to 32 processes. In f
 
 <br>
 <p align="center">
-  <img width="800" height="480" src="analysis/figures/ex-2.png">
+  <img width="640" height="384" src="analysis/figures/ex-2.png">
 </p>
 <br>
 
@@ -522,7 +522,7 @@ Performance metrics for the optimized design were initially similar to the origi
 
 <br>
 <p align="center">
-  <img width="800" height="480" src="analysis/figures/ex-3.png">
+  <img width="640" height="384" src="analysis/figures/ex-3.png">
 </p>
 <br>
 
@@ -532,7 +532,7 @@ Speedup also sees an increases at `n > 64`, with consistent increase in speedup 
 
 <br>
 <p align="center">
-  <img width="800" height="480" src="analysis/figures/ex-4.png">
+  <img width="640" height="384" src="analysis/figures/ex-4.png">
 </p>
 <br>
 
