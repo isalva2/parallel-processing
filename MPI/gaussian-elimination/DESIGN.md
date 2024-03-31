@@ -423,9 +423,11 @@ Below are the runtime results and speedup of the program for a workload of `N = 
 
 Looking at the runtime split of the different phases of the program, it is apparent by the table of results and the log scale of the figure that the majority of runtime is attributed to the calculation of the Gaussian elimination step.
 
-<div style="text-align:center;">
-    <img src="analysis/figures/ex-1.png" style="width:auto; height:100%;">
-</div>
+<br>
+<p align="center">
+  <img width="1200" height="600" src="analysis/figures/ex-1.png">
+</p>
+<br>
 
 As expected, calculation time decreases with an increase in number of processes, with a top performance of 2.53 seconds at `p = 128`. In general scheduling time increases with increasing `p`, and I/O time was constant and negligible for all program executions.
 
@@ -433,15 +435,15 @@ Another observation is that runtime plateaus at around 4.5 seconds with the exce
 
 <br>
 <p align="center">
-  <img width="300" height="300" src="analysis/figures/ex-2-detail.png">
+  <img width="600" height="600" src="analysis/figures/ex-2-detail.png">
 </p>
 <br>
 
 Looking at speedup, the program exhibits linear speedup up to 32 processes. In fact, for processes between 4 and 16, the parallelization exhibited *super-linear* speedup, but could most likely be due to statistical variances on runtime, given how closely the experimental results follow the theoretical linear speedup.
 
 <br>
-<div style="text-align:center;">
-    <img src="analysis/figures/ex-2.png" style="width:auto; height:100%;">
-</div>
+<p align="center">
+  <img width="1200" height="600" src="analysis/figures/ex-2.png">
+</p>
 <br>
 
