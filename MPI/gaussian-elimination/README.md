@@ -23,16 +23,16 @@ At two CPUs per node, the compute environment for this exercise was able to util
 
 To compile the parallel program `gauss-mpi.c`, we follow the standard MPICH implementation that uses the `mpicc` command to link the program file to an executable.
 
-```console
+```bash
 $ mpicc -o gauss-mpi.out gauss-mpi.c
 ```
 
 Upon compilation, the MPI program can be ran using the terminal command `mpicc` and specifying program parameters:
 
 ```bash
-mpirun -np [p] ./gauss-mpi.out <N> [s]
+$ mpirun -np p ./gauss-mpi.out N s
 ```
-where the `-np` flag allows us to specify the number of processes used, `N` is the size of the matrix `A`, and `s` is an optional random seed for reproducibility.
+where the `-np` flag allows us to specify the number of`p` processes used, `N` is the size of matrix `A`, and `s` is an optional random seed for reproducibility.
 
 
 For convenience, the included shell script [`compile.sh`](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/compile.sh)
