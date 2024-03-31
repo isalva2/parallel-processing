@@ -51,7 +51,7 @@ def draw_figure_2():
     fig, ax = plt.subplots(figsize = (10, 6))
     
     plt.plot(df["proc"], df["sp"], marker = "o", label = "Experimental")
-    plt.plot((0,160), (0,160), label = "Theoretical")
+    plt.plot((0,160), (0,160), label = "Theoretical", linestyle = "--", color = "red", zorder = 0)
     
     ax.legend(title="Speedup", framealpha = 1)
 
@@ -77,7 +77,7 @@ def draw_figure_3():
     fig, ax = plt.subplots(figsize = (6, 6))
     
     plt.plot(df["proc"], df["sp"], marker = "o", label = "Experimental")
-    plt.plot((0,160), (0,160), label = "Theoretical", zorder = 1)
+    plt.plot((0,160), (0,160), label = "Theoretical", linestyle = "--", color = "red", zorder = 0)
     
     ax.legend(title="Speedup", framealpha = 1)
     ax.set_xlim(0, 40)

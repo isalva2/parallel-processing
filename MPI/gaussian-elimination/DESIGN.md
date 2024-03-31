@@ -495,4 +495,35 @@ With this idea in mind, modifications to the broadcast section of the code looks
         MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
 ```
 
-At the `norm`*-th* iteration, the buffer address of the first `MPI_Bcast()` is indexed at the row after the `norm` row, and at the next column in the algorithm.
+At the `norm`*-th* iteration, the buffer address of the first `MPI_Bcast()` is indexed at the row after the `norm` row, and at the next column in the algorithm. Upon further inspection of the calculation it appears we have exhausted the extent to which this algorithm can be optimized, given the problem statement requirements and available compute resources.
+
+## Final Experimental Results
+
+The optimized program was then experimentally validated against the same parameters as the The results of the optimized Gaussian elimination program exhibit succesful optimization of the original design:
+
+| Processes |  Scheduling |  Calculation|   Input/Output | Total Runtime | Speedup |
+|:--------:|:---------:|:--------:|:--------:|:---------:|:--------:|
+| 1  | - | - | - | 136.245000 | 1.000000 |
+| 2  | 0.033780 | 62.457058 | 0.000016 | 62.490854 | 2.180239 |
+| 4  | 0.017332 | 31.356324 | 0.000018 | 31.373673 | 4.342654 |
+| 8  | 0.017305 | 15.822196 | 0.000007 | 15.839509 | 8.601592 |
+| 16 | 0.018694 | 8.084927 | 0.000008 | 8.103629 | 16.812838 |
+| 32 | 0.020671 | 4.197893 | 0.000007 | 4.218571 | 32.296481 |
+| 64 | 0.026027 | 4.375047 | 0.000021 | 4.401094 | 30.957076 |
+| 80 | 0.028670 | 4.096097 | 0.000063 | 4.124831 | 33.030444 |
+| 90 | 0.031784 | 3.730418 | 0.000003 | 3.762205 | 36.214135 |
+| 100 | 0.028927 | 3.412251 | 0.000030 | 3.441207 | 39.592213 |
+| 128 | 0.054222 | 2.437866 | 0.000005 | 2.492093 | 54.670913 |
+| 140 | 0.051482 | 3.038696 | 0.000036 | 3.090213 | 44.089194 |
+| 150 | 0.086400 | 3.044231 | 0.000020 | 3.130651 | 43.519702 |
+| 160 | 0.078198 | 3.372274 | 0.000003 | 3.450475 | 39.485868 |
+
+Performance metrics for the optimized design were initially similar to the original, but for larger processes sizes after `n < 32` the improvements from reduced `MPI_Bcast()` buffer sizes as apparent. Total runtime for the optimized design was consistently faster than the original, with the best runtime again at `p = 128`.
+
+<br>
+<p align="center">
+  <img width="800" height="480" src="analysis/figures/optimized/ex-3.png">
+</p>
+<br>
+
+Although total runtime and calculation splits were less than the unoptimized design, the total optimized scheduling and I/O (I/O contribution negligible) actually increased. This result is surprising given that modifications to the original design occurred only in the calculation phase of the code, therefore code for both scheduling routines are identical.
