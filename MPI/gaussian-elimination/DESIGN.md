@@ -522,8 +522,18 @@ Performance metrics for the optimized design were initially similar to the origi
 
 <br>
 <p align="center">
-  <img width="800" height="480" src="analysis/figures/optimized/ex-3.png">
+  <img width="800" height="480" src="analysis/figures/ex-3.png">
 </p>
 <br>
 
 Although total runtime and calculation splits were less than the unoptimized design, the total optimized scheduling and I/O (I/O contribution negligible) actually increased. This result is surprising given that modifications to the original design occurred only in the calculation phase of the code, therefore code for both scheduling routines are identical.
+
+Speedup also sees an increases at `n > 64`, with consistent increase in speedup for all tested number of processes.
+
+<br>
+<p align="center">
+  <img width="800" height="480" src="analysis/figures/ex-4.png">
+</p>
+<br>
+
+As with the original design, top performance occurs at `n = 128` with a marginal increase from 53.7406 to 54.670913. Barring this outlier, increases in speedup at the upper range of processes span between 17.49% and 49.25%. From these metrics the optimization techniques implemented in this final design is justifiable and warranted.
