@@ -1,6 +1,6 @@
 # Design
 
-This document encompasses the design choices made to implement and optimize the Gaussian elimination parallel algorithm using Message Passing Interface (MPI). We will be using the [MPICH](https://www.mpich.org/) implementation and developing/testing on various Unix-like platforms. For information on the development and testing environment for this program, please see the `README` document.
+This document summarizes the design choices made to implement and optimize the Gaussian elimination parallel algorithm using Message Passing Interface (MPI). We will be using the [MPICH](https://www.mpich.org/) implementation and developing/testing the design choices in [Chameleon Cloud](https://www.chameleoncloud.org/). For more information on the hardware and testing environment for this program, please see the [README](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/README.md) file.
 
 ## Design Considerations and Requirements
 
@@ -435,7 +435,7 @@ Another observation is that runtime plateaus at around 4.5 seconds with the exce
 
 <br>
 <p align="center">
-  <img width="400" height="400" src="analysis/figures/ex-2-detail.png">
+  <img width="500" height="500" src="analysis/figures/ex-2-detail.png">
 </p>
 <br>
 
