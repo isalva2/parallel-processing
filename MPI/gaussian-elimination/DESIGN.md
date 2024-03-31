@@ -393,6 +393,53 @@ Let's go step-by-step through this function:
 
 ## Experimental Results
 
-The parallel MPI program, `gauss-mpi,c`, was then evaluated for performance. In addition to the primary metrics of program runtime $T_p$ and speedup $S_p$, the scheduling and calculation times were recorded to derive additional insight on the behavior of the program.
+The program was run on [Chameleon Cloud](https://www.chameleoncloud.org/) on a physical compute node with two Intel(R) Xeon(R) Platinum 8380 CPU's @ 2.30GHz. The node had 160 threads available, which was the primary experimental constraint for these initial results. Please see the [README](https://github.com/isalva2/parallel-processing/blob/main/MPI/gaussian-elimination/README.md) file for further details on the compute environment.
 
-The program was run on [Chameleon Cloud](https://www.chameleoncloud.org/) on a physical compute node with two Intel(R) Xeon(R) Platinum 8380 CPU's @ 2.30GHz. The node 
+The parallel MPI program, `gauss-mpi,c`, was then evaluated for performance. In addition to the primary metrics of program runtime $T_p$ and speedup $S_p$, the scheduling, calculation, and Input/Output times were recorded to derive additional insight on the behavior of the program.
+
+Below are the runtime results and speedup of the program for a workload of `N = 5000` and for a varying number of processes between $[1, 160]$. While the execution of these experimental runs were performed on a physical node with 80 cores, the number of processes that were available using MPI was 160. It appears then then that this MPI compute environment is constrained to the number of threads in the node.
+
+<br>
+
+| Processes |  Scheduling |  Calculation|   Input/Output | Total Runtime | Speedup |
+|:--------:|:---------:|:--------:|:--------:|:---------:|:--------:|
+|     1*    | -  | -| - | 136.245000|  1.0000  |
+|     2    | 0.033389  | 62.511223| 0.000016 | 62.544628 |  2.1784  |
+|     4    | 0.017588  | 31.407220| 0.000016 | 31.424824 |  4.3356  |
+|     8    | 0.016505  | 15.870490| 0.000006 | 15.887000 |  8.5759  |
+|    16    | 0.018768  | 8.153309 | 0.000008 | 8.172086  |  16.6720 |
+|    32    | 0.019588  | 4.251714 | 0.000005 | 4.271306  |  31.8977 |
+|    64    | 0.027006  | 4.453472 | 0.000008 | 4.480486  |  30.4085 |
+|    80    | 0.030870  | 4.815225 | 0.000007 | 4.846102  |  28.1143 |
+|    90    | 0.031736  | 4.490077 | 0.000004 | 4.521817  |  30.1306 |
+|   100    | 0.032757  | 4.397681 | 0.000003 | 4.430441  |  30.7520 |
+|   128    | 0.031620  | 2.503614 | 0.000001 | 2.535235  |  53.7406 |
+|   130    | 0.054888  | 4.339068 | 0.000023 | 4.393980  |  31.0072 |
+|   140    | 0.034187  | 4.374915 | 0.000005 | 4.409108  |  30.9008 |
+|   150    | 0.049402  | 4.623055 | 0.000033 | 4.672489  |  29.1590 |
+|   160    | 0.038593  | 4.927063 | 0.000067 | 4.965723  |  27.4371 |
+
+*\*Serial computation evaluated using source gauss code*
+
+Looking at the runtime split of the different phases of the program, it is apparent by the table of results and the log scale of the figure that the majority of runtime is attributed to the calculation of the Gaussian elimination step.
+
+<div style="text-align:center;">
+    <img src="analysis/figures/ex-1.png" style="width:auto; height:100%;">
+</div>
+
+As expected, calculation time decreases with an increase in number of processes, with a top performance of 2.53 seconds at `p = 128`. In general scheduling time increases with increasing `p`, and I/O time was constant and negligible for all program executions.
+
+Another observation is that runtime plateaus at around 4.5 seconds with the exception of the top runtime at `p = 128`, then returning to sub-optimal performance at higher processes count. Additionally (and surprisingly), program executions at `p = 127` and `p = 129` still exhibited sub-optimal performance around 4.5 seconds, a near 2 second difference for +/- an additional process. It is unknown mechanism is contributing to this increase in performance, but an educated guess would be that either the compute node, the version of MPI, or some other combination of hardware and software is specially optimized or accelerated for 128 threads.
+
+<div style="text-align:center;">
+    <img src="analysis/figures/ex-2-detail.png" style="width:50%; height:50%;">
+</div>
+<br>
+
+Looking at speedup, the program exhibits linear speedup up to 32 processes. In fact, for processes between 4 and 16, the parallelization exhibited *super-linear* speedup, but could most likely be due to statistical variances on runtime, given how closely the experimental results follow the theoretical linear speedup.
+
+<div style="text-align:center;">
+    <img src="analysis/figures/ex-2.png" style="width:auto; height:100%;">
+</div>
+<br>
+
