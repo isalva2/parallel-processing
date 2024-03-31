@@ -277,7 +277,7 @@ void gauss_mpi()
         
         // norm-th proc broadcasts next, completed, norm + 1 row for next iteration
         proc = norm % numprocs;
-        MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
+        MPI_Bcast(&A[norm+1][norm+1], N - norm - 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
         MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
 
         MPI_Barrier(MPI_COMM_WORLD);

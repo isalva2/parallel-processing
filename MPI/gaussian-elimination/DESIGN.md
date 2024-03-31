@@ -387,7 +387,7 @@ void gauss_mpi()
 Let's go step-by-step through this function:
 
 1. **Function Initialization** Local variables and `MPI_Status` objects are declared similarly to the initial design of `gauss_mpi()`. Since `MPI_Isend()` is not used in this version, a single `MPI_Status` object can be used as opposed to an array.
-2. **Process Scheduling** Assignment of rows is performed in a round-robin fashion, where each row is assigned a processor cyclically using the modulo operator `%` and the number of processes `numprocs`. For each worker process, the root process performs two `MPI_Send()` routines and corresponding `MPI_Recv()` for `A` and `B` respectively. Both send buffers are indexed to the `row+1`*-th* column to account for the initial normalization row at `row = 0`, in essence beginning static scheduling at the second row of `A` where `row = 0`. Assignment concludes with a one-to-all `MPI_Bcast()` of the of the first `norm = 0` row of `A` and `B` for the first iteration of the Gaussian elimination step.
+2. **Process Scheduling** Assignment of rows is performed in a round-robin fashion, where each row is assigned a processor cyclically using the modulo operator `%` and the number of processes `numprocs`. For each worker process, the root process performs two `MPI_Send()` routines and corresponding `MPI_Recv()` for `A` and `B` respectively. Both send buffer arrays are indexed to the `row+1`*-th* column to account for the initial normalization row at `row = 0`, in essence beginning static scheduling at the second row of `A` where `row = 0`. Assignment concludes with a one-to-all `MPI_Bcast()` of the of the first `norm = 0` row of `A` and `B` for the first iteration of the Gaussian elimination step.
 3. **Gaussian Elimination** The Gaussian elimination step begins at the first `norm` iteration, where rows of `A` are calculated by their respective process. Since the `norm % numproc`*-th* process calculates the row of `A` immediately after the `norm` row, that process then calls two `MPI_Bcast()` routines to send the newly calculated `norm + 1`*-th* row for the subsequent `norm + 1`*-th* iteration. This one-to-all communication per iteration also has the additional benefit of updating the root process's copies of `A` and `B`. This allows for no need for additional communication after the Gaussian elimination step.
 4. **Back Substitution** The root process then completes the calculation by computing the back substitution step, identical to the previous design and the serial version of the algorithm.
 
@@ -447,8 +447,52 @@ Looking at speedup, the program exhibits linear speedup up to 32 processes. In f
 </p>
 <br>
 
-Looking at the full speedup graph up to `p = 180`, the optimized performance at `p = 128` is even more aparent, with a top speedup of 53.74, almost 2 times more than the prevailing sub-optimal speedup around 30.
+Looking at the full speedup graph up to `p = 180`, the optimized performance at `p = 128` is even more apparent, with a top speedup of 53.74, almost 2 times more than the prevailing sub-optimal speedup around 30.
 
 ## Optimization
 
-From the second, 
+Based on the experimental results, it's clear that further performance gains can be obtained by optimizing the calculation step of the program. Looking at the code for the calculation phase the only place that any optimization could occur is in the collective `MPI_Bcast()` calls.
+
+```c
+    for (norm = 0; norm < N - 1; norm++)
+    {
+        for (row = norm + 1; row < N; row ++)
+        {
+            if (myid == (row - 1 + numprocs) % numprocs)
+            {
+                multiplier = A[row][norm] / A[norm][norm];
+                for (col = norm; col < N; col++)
+                {
+                    A[row][col] -= A[norm][col] * multiplier;
+                }
+                B[row] -= B[norm] * multiplier;
+            }
+        }
+        proc = norm % numprocs;
+        MPI_Bcast(&A[norm+1][0], N, MPI_FLOAT, proc, MPI_COMM_WORLD);
+        MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
+    }
+    if (myid == 0)
+    {
+        for (row = N - 1; row >= 0; row--)
+        {
+            X[row] = B[row];
+            for (col = N - 1; col > row; col--)
+            {
+                X[row] -= A[row][col] * X[col];
+            }
+            X[row] /= A[row][row];
+        }
+    }
+```
+There is some good intuition for this as well. As the Gaussian elimination algorithm results in a reduced upper triangle matrix, at `norm = 2500` approximately 50% of the buffer array will be redundant sends of `0.0`, and at the culmination of the algorithm at `norm = 4999`, only 0.02% of the buffer is used to send the last element of the last row of `A`.
+
+With this idea in mind, modifications to the broadcast section of the code looks like this:
+
+```c
+        proc = norm % numprocs;
+        MPI_Bcast(&A[norm+1][norm+1], N - norm - 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
+        MPI_Bcast(&B[norm+1], 1, MPI_FLOAT, proc, MPI_COMM_WORLD);
+```
+
+At the `norm`*-th* iteration, the buffer address of the first `MPI_Bcast()` is indexed at the row after the `norm` row, and at the next column in the algorithm.
