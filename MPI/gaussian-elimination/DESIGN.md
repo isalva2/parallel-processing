@@ -288,7 +288,7 @@ After all `norm` iterations are complete, a final `MPI_Barrier()` is called and 
 
 Upon initial testing of the original `gauss_mpi()` function implementation, the program functioned correctly, and was mathematically equivalent to the serial version. However, at small workloads (`N < 1000`) the program did not appear to exhibit performance gains and at large workloads (`N > 3000`), performance severely degraded and would often hang from deadlock.
 
-At the problem statement workload of `N = 5000`, a rough approximation of the number of messages sent would be for every `norm` iteration, the program will send `2*(N - norm)` messages. For the first iteration that would be 10,000 messages, and a conservative estimate,$\frac{2N(N-1)}{2}$, puts the lower bound of messages sent for this program at 12.5 million send/receive operations.
+At the problem statement workload of `N = 5000`, a rough approximation of the number of messages sent would be for every `norm` iteration, the program will send `2*(N - norm)` messages. For the first iteration that would be 10,000 messages, and a conservative estimate, $\frac{2N(N-1)}{2}$, puts the lower bound of messages sent for this program at 12.5 million send/receive operations.
 
 For context the serial program can perform the computation in approximately 136 seconds. It is apparent that communication costs are impacting performance, and it is imperative that subsequent design versions must minimize communication between processes.
 
