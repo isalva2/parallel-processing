@@ -33,8 +33,12 @@ __global__ void row_sums(const float *A, float *sums, size_t ds)
         float sum = 0.0f;
         for (size_t i = 0; i < ds; i++)
         {
-            /* start at the idx-th row, first element, then go one column over ds (DSIZE) times to last column */
-            sum += A[idx + i];
+            /*
+            Start at the idx-th row, first element, indexed at A[idx * ds],
+            multiplying by ds moves down one row by a stride of ds.
+            Next go one element over in the row ds times, to end of row.
+            */
+            sum += A[idx * ds + i];
         }
         sums[idx] = sum;
     }
@@ -55,8 +59,12 @@ __global__ void column_sums(const float *A, float *sums, size_t ds)
         float sum = 0.0f;
         for (size_t i = 0; i < ds; i++)
         {
-            /* start at idx-th column, at the first row, then go down one row with a stride of ds (DSIZE) */
-            sum += A[idx + idx * ds];
+            /*
+            Start at the idx-th column, first element, indexed at
+            A[idx],then go down one row ds times, using a stride of
+            ds (DSIZE). This stride is indexed using 1 * ds.
+            */
+            sum += A[idx + i * ds];
         }
         sums[idx] = sum;
     }
