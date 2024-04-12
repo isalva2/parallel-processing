@@ -111,7 +111,7 @@ void initialize_inputs()
 
 #pragma region // CUDA Kernels
 
-__global__ void matrix_norm(const float *A, float *B, int N)
+__global__ void matrix_norm(const float *A, float *B, const int N)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     // for (int i = O; i < N*N; i++)
@@ -119,8 +119,6 @@ __global__ void matrix_norm(const float *A, float *B, int N)
     //     B[i] = 1.0;
     // }
     printf("Thread %d reporting for duty\n", idx);
-
-    cudaDeviceSynchronize();
 }
 
 #pragma endregion
@@ -180,6 +178,9 @@ int main (int argc, char **argv)
         printf("\nWarning! Total threads different from N = %d\n", N);
     }
 
+    // Send it
+    matrix_norm<<<grid_size, block_size>>>(d_A, d_B, N)
+    cudaDeviceSynchronize();
 
 
     #pragma region // host infrastructure
