@@ -159,9 +159,10 @@ int main (int argc, char **argv)
 
     // Display kernel launch parameters
     printf("\nKernel Launch Parameters:\n");
-    printf("Blocks:\t%d\n", grid_size);
+    printf("-------------------------\n")
+    printf("Blocks:\t\t%d\n", grid_size);
     printf("Threads/Block:\t%d\n", block_size);
-    printf("Threads allocated:\t%d", grid_size * block_size);
+    printf("Total threads:\t%d\n", grid_size * block_size);
     if (N % block_size != 0)
     {
         printf("\nWarning! Number of threads different from N = %d\n", N);
