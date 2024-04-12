@@ -14,6 +14,7 @@ Matrix Normalization using CUDA
 /* Program parameters */
 #define MAXN 6000
 int N;
+int block_size = 0;
 
 /* Declare host data */
 float *h_A, *h_B;
@@ -40,7 +41,11 @@ void parameters(int argc, char **argv)
 
     srand(time_seed()); /* Randomize */
 
-    if (argc == 3)
+    if (argc == 4)
+    {
+        block_size = atoi(argv[3]);
+    }
+    if (argc >= 3)
     {
         seed = atoi(argv[2]);
         srand(seed);
@@ -57,7 +62,7 @@ void parameters(int argc, char **argv)
     }
     else
     {
-        printf("Usage: %s <matrix_dimension> [random seed]\n", argv[0]);
+        printf("Usage: %s <matrix_dimension> [random seed] [block size]\n", argv[0]);
         exit(0);
     }
 }
@@ -104,6 +109,10 @@ void initialize_inputs()
 
 #pragma endregion
 
+#pragma region // CUDA Kernels
+
+#pragma endregion
+
 int main (int argc, char **argv)
 {
     #pragma region // host infrastructure
@@ -127,6 +136,18 @@ int main (int argc, char **argv)
 
     /* Print matrix N <= 10 */
     print_matrix(h_A);
+
+    /* Begin CUDA operations */
+
+    // Allocate device memory for A and B
+    float *d_A, *d_B;
+    cudaMalloc(&d_A, N * N * sizeof(float));
+    cudaMalloc(&d_B, N * N * sizeof(float));
+
+    // Copy host A to device
+    cudaMemcpy(d_A, h_A, N * N * sizeof(float), cudaMemcpyHostToDevice);
+
+
 
     #pragma region // host infrastructure
 
