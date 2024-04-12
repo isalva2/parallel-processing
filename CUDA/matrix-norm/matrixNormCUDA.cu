@@ -121,7 +121,7 @@ __global__ void matrix_norm(const float *A, float *B, const int N)
         mu = 0.0;
         for (row = 0; row < N; row++)
             mu += A[idx + row * N];
-        sigma /= (float) N;
+        mu /= (float) N;
 
         sigma = 0.0;
         for (row = 0; row < N; row++)
