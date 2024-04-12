@@ -14,7 +14,7 @@ Matrix Normalization using CUDA
 /* Program parameters */
 #define MAXN 6000
 int N;
-int block_size = 0;
+int grid_size, block_size = 0;
 
 /* Declare host data */
 float *h_A, *h_B;
@@ -132,10 +132,10 @@ int main (int argc, char **argv)
     printf("\nStarting clock.\n");
     gettimeofday(&start, &tzdummy);
 
-    #pragma endregion
-
     /* Print matrix N <= 10 */
     print_matrix(h_A);
+    
+    #pragma endregion
 
     /* Begin CUDA operations */
 
@@ -147,6 +147,26 @@ int main (int argc, char **argv)
     // Copy host A to device
     cudaMemcpy(d_A, h_A, N * N * sizeof(float), cudaMemcpyHostToDevice);
 
+    // Default block size if not specified
+    // CUDA best practices indicate a preffered block size of multiples of 32
+    if (block_size == 0)
+    {
+        block_size = 32;
+    }
+
+    // Calculate grid size
+    grid_size = (int) ceil(N + block_size - 1) / block_size;
+
+    // Display kernel launch parameters
+    printf("\nKernel Launch Parameters:\n");
+    printf("Blocks:\t%d\n", grid_size);
+    printf("Threads/Block:\t%d\n", block_size);
+    printf("Threads allocated:\t%d", grid_size * block_size);
+    if (N % block_size != 0)
+    {
+        printf("\nWarning! Number of threads different from N = %d\n", N);
+    }
+
 
 
     #pragma region // host infrastructure
@@ -156,7 +176,7 @@ int main (int argc, char **argv)
     runtime = (unsigned long long)(stop.tv_sec - start.tv_sec) * 1000000 + (stop.tv_usec - start.tv_usec);
     
     
-    /* Display timing results */
+    /* Disp`y timing results */
     printf("\nStopped clock.\n");
     printf("\nRuntime = %g ms.\n", (float)runtime/(float)1000);
     print_matrix(h_B);
