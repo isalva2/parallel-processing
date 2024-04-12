@@ -199,7 +199,7 @@ int main (int argc, char **argv)
         
     free(h_A);
     free(h_B);
-    cuda_free(d_A);
-    cuda_free(d_B);
+    cudaFree(d_A);
+    cudaFree(d_B);
     exit(0);
 }
