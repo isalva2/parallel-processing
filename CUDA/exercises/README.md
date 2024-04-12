@@ -66,7 +66,7 @@ deviceQuery, CUDA Driver = CUDART, CUDA Driver Version = 12.2, CUDA Runtime Vers
 Result = PASS
 ```
 
-At 108 multiprocessors with 2,048 threads each, the theoretical concurrent threads we could run on this GPU is 221,184. Whether this can actually be implemented in practice is the subject of a later section.
+At 108 multiprocessors with 2,048 threads each, the theoretical concurrent threads we could run on this GPU is 221,184. Whether this can actually be implemented in practice is beyond the scope of this exercise.
 
 ## 2. Compiling and Execution
 
@@ -89,7 +89,7 @@ $ ./matrix_sum.out
 
 ### Exercise 1: `hello.cu`
 
-The first CUDA source file is a GPU "hello world!" example. Running the executable results in a hello from 4 threads in two thread blocks.
+The first CUDA source file is a GPU "hello world!" example. Running the executable results in a hello print from 4 threads, two per thread block.
 
 ```bash
 $ ./hello.out
@@ -100,13 +100,13 @@ Hello from block: 1, thread: 1
 ```
 ### Exercise 2: `vector_add.cu`
 
-The second exercise consisted of vector addition between vectors `A` and `B`, both 4,096 elements long. The kernel function `vadd()` was used to perform this operation in GPU, and in the source file the kernel was called in main as follows:
+The second exercise consisted of vector addition between vectors `A` and `B`, both 4,096 elements long. The kernel function `vadd()` was used to perform this operation in GPU, and the kernel launch was specified by the below execution configuration:
 
-```cpp
-vadd<<<(DSIZE + block_size - 1) / block_size, block_size>>>(d_A, d_B, d_C, DSIZE);
+```
+<<<(DSIZE + block_size - 1) / block_size, block_size>>>
 ```
 
-At `DSIZE = 4096` and `block_size = 256`, the execution configuration argument `DSIZE + block_size - 1) / block_size` ensures that the correct grid and block size is used to parallelize the 4,096 elements of the vector addition operation.
+At `DSIZE = 4096` and `block_size = 256`, the execution configuration argument `(DSIZE + block_size - 1) / block_size` ensures that the correct grid and block size is used to capture the 4,096 elements of the vector addition operation.
 
 At run time, the executable produces the following results:
 
@@ -127,4 +127,50 @@ C[300] = 1.725117
 
 ### Exercise 3: `matrix_sum.cu`
 
-The third exercise consisted of row-wise and column-wise summation of a square matrix `A`. The kernel function for the row-wise summation looks like this
+The third exercise consisted of row-wise and column-wise summation of a square matrix `A`. The kernel function for the row-wise summation looks like this:
+
+```cpp
+// matrix row-sum kernel
+__global__ void row_sums(const float *A, float *sums, size_t ds)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < ds)
+    {
+        float sum = 0.0f;
+        for (size_t i = 0; i < ds; i++)
+        {
+            sum += A[idx * ds + i];
+        }
+        sums[idx] = sum;
+    }
+}
+```
+
+Where matrix `A` is indexed in one dimension, threads begin at the `idx`-th row of `A`, and summation operations are iterated `ds` times (the size of the square matrix). By initializing each thread to start at `idx * ds`, subsequent threads start at one stride (of width `ds`) away from the previous thread.
+
+Similarly, the kernel function for column-wise summation looks like this:
+
+```cpp
+__global__ void column_sums(const float *A, float *sums, size_t ds)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < ds)
+    {
+        float sum = 0.0f;
+        for (size_t i = 0; i < ds; i++)
+        {
+            sum += A[idx + i * ds];
+        }
+        sums[idx] = sum;
+    }
+}
+```
+Where threads begin along the first row of `A`, and work there way down one element of their column using a stride of `ds`.
+
+The output of this program is simply a check to see if the calculations are correct:
+
+```bash
+$ ./matrix_sum.out
+row sums correct!
+column sums correct!
+```
