@@ -111,7 +111,7 @@ void initialize_inputs()
 
 #pragma region // CUDA Kernels
 
-__global__ void matrix_norm(const float *A, float *B, const int N)
+__global__ void matrix_norm(const float *A, float *B, int N)
 {
     int row;
     int mu, sigma;
