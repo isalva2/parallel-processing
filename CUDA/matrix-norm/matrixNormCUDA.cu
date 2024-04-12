@@ -43,13 +43,13 @@ void parameters(int argc, char **argv)
 
     if (argc == 4)
     {
-        block_size = atoi(argv[3]);
+        seed = atoi(argv[3]);
+        srand(seed);
+        printf("Random seed = %i\n", seed);
     }
     if (argc >= 3)
     {
-        seed = atoi(argv[2]);
-        srand(seed);
-        printf("Random seed = %i\n", seed);
+        block_size = atoi(argv[2]);
     }
     if (argc >= 2)
     {
@@ -62,7 +62,7 @@ void parameters(int argc, char **argv)
     }
     else
     {
-        printf("Usage: %s <matrix_dimension> [random seed] [block size]\n", argv[0]);
+        printf("Usage: %s <matrix_dimension> [block size] [random seed]\n", argv[0]);
         exit(0);
     }
 }
@@ -165,7 +165,7 @@ int main (int argc, char **argv)
     printf("Total threads:\t%d\n", grid_size * block_size);
     if (N % block_size != 0)
     {
-        printf("\nWarning! Number of threads different from N = %d\n", N);
+        printf("\nWarning! Total threads different from N = %d\n", N);
     }
 
 
