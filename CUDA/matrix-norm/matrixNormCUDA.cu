@@ -115,11 +115,11 @@ __global__ void matrix_norm(const float *A, float *B, const int N)
 {
     int row, col;
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    for (col = 0; row < N; row ++)
+    if (idx < N)
     {
-        for (row = O; row < N; row++)
+        for (row = 0; row < N; row++)
         {
-            B[col + row * idx] = A[col + row * idx]
+            B[idx + row * N] = A[idx + row * N]; 
         }
     }
 }
