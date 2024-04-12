@@ -12,7 +12,7 @@ Matrix Normalization using CUDA
 #include <time.h>
 
 /* Program parameters */
-#define MAXN 6000
+#define MAXN 7000
 int N;
 int grid_size, block_size = 0;
 
