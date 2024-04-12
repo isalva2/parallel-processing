@@ -113,13 +113,27 @@ void initialize_inputs()
 
 __global__ void matrix_norm(const float *A, float *B, const int N)
 {
-    int row, col;
+    int row;
+    int mu, sigma;
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx == 3)
+    if (idx < N)
     {
+        mu = 0.0;
+        for (row = 0; row < N; row++)
+            mu += A[idx + row * N];
+        sigma /= (float) N;
+
+        sigma = 0.0;
+        for (row = 0; row < N; row++)
+            sigma += powf(A[idx + row * N]);
+        sigma = sqrt(sigma/N);
+
         for (row = 0; row < N; row++)
         {
-            B[idx + row * N] = A[idx + row * N]; 
+            if (sigma == 0.0)
+                B[idx + row * N] = 0.0;
+            else
+                B[idx + row * N] = (A[idx + row * N] - mu) / sigma;
         }
     }
 }
