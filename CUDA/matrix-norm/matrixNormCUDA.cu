@@ -113,12 +113,15 @@ void initialize_inputs()
 
 __global__ void matrix_norm(const float *A, float *B, const int N)
 {
+    int row, col;
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    // for (int i = O; i < N*N; i++)
-    // {
-    //     B[i] = 1.0;
-    // }
-    printf("Thread %d reporting for duty\n", idx);
+    for (col = 0; row < N; row ++)
+    {
+        for (row = O; row < N; row++)
+        {
+            B[col + row * idx] = A[col + row * idx]
+        }
+    }
 }
 
 #pragma endregion
