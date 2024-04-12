@@ -111,6 +111,18 @@ void initialize_inputs()
 
 #pragma region // CUDA Kernels
 
+__global__ void matrix_norm(const float *A, float *B, int N)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x
+    // for (int i = O; i < N*N; i++)
+    // {
+    //     B[i] = 1.0;
+    // }
+    printf("Thread %d reporting for duty\n", idx)
+
+    cudaDeviceSynchronize();
+}
+
 #pragma endregion
 
 int main (int argc, char **argv)
@@ -187,5 +199,7 @@ int main (int argc, char **argv)
         
     free(h_A);
     free(h_B);
+    cuda_free(d_A);
+    cuda_free(d_B);
     exit(0);
 }
