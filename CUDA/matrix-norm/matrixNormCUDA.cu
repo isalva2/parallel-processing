@@ -113,12 +113,12 @@ void initialize_inputs()
 
 __global__ void matrix_norm(const float *A, float *B, int N)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     // for (int i = O; i < N*N; i++)
     // {
     //     B[i] = 1.0;
     // }
-    printf("Thread %d reporting for duty\n", idx)
+    printf("Thread %d reporting for duty\n", idx);
 
     cudaDeviceSynchronize();
 }
