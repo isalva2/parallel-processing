@@ -185,6 +185,7 @@ int main (int argc, char **argv)
     matrix_norm<<<grid_size, block_size>>>(d_A, d_B, N);
     cudaDeviceSynchronize();
 
+    cudaMemcpy(h_B, d_B, N * sizeof(float), cudaMemcpyDeviceToHost);
 
     #pragma region // host infrastructure
 
