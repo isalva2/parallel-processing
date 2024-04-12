@@ -179,7 +179,7 @@ int main (int argc, char **argv)
     }
 
     // Send it
-    matrix_norm<<<grid_size, block_size>>>(d_A, d_B, N)
+    matrix_norm<<<grid_size, block_size>>>(d_A, d_B, N);
     cudaDeviceSynchronize();
 
 
