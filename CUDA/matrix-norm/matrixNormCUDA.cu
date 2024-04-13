@@ -128,7 +128,7 @@ __global__ void matrix_norm(const float *A, float *B, int N)
         sigma = 0.0;
         for (row = 0; row < N; row++)
             sigma += powf(A[idx + row * N] - mu, 2.0);
-        sigma /= (float) N
+        sigma /= (float) N;
         sigma = sqrt(sigma);
 
         for (row = 0; row < N; row++)
@@ -218,7 +218,7 @@ int main (int argc, char **argv)
     printf("\n---------------------------------------------\n");
 
     #pragma endregion
-    
+
     free(h_A);
     free(h_B);
     cudaFree(d_A);
