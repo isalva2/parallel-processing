@@ -125,8 +125,9 @@ __global__ void matrix_norm(const float *A, float *B, int N)
 
         sigma = 0.0;
         for (row = 0; row < N; row++)
-            sigma += powf(A[idx + row * N], 2.0);
-        sigma = sqrt(sigma/N);
+            sigma += powf(A[idx + row * N] - mu, 2.0);
+        sigma /= (float) N
+        sigma = sqrt(sigma);
 
         for (row = 0; row < N; row++)
         {
