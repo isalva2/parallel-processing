@@ -1,5 +1,5 @@
 /*
-Matrix Normalization using CUDA
+Matrix Normalization using CUD
 */
 
 #include <stdio.h>

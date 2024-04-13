@@ -1,5 +1,7 @@
 /*
 Matrix Normalization using CUDA
+Compile with experimental flag
+"nvcc --expt-relaxed-constexpr matrixNormCUDA.cu"
 */
 
 #include <stdio.h>
@@ -114,7 +116,7 @@ void initialize_inputs()
 __global__ void matrix_norm(const float *A, float *B, int N)
 {
     int row;
-    int mu, sigma;
+    float mu, sigma;
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < N)
     {
@@ -216,7 +218,7 @@ int main (int argc, char **argv)
     printf("\n---------------------------------------------\n");
 
     #pragma endregion
-        
+    
     free(h_A);
     free(h_B);
     cudaFree(d_A);
