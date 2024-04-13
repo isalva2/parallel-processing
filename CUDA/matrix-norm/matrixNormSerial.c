@@ -40,10 +40,9 @@ void parameters(int argc, char **argv)
 
     if (argc == 3)
     {
-        seed = atoi(argv[3]);
+        seed = atoi(argv[2]);
         srand(seed);
         printf("Random seed = %i\n", seed);
-        block_size = atoi(argv[2]);
     }
     if (argc >= 2)
     {
