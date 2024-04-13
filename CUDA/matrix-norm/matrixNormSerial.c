@@ -89,6 +89,13 @@ void initialize_inputs()
     h_A = (float *)malloc(N*N * sizeof(float));
     h_B = (float *)malloc(N*N * sizeof(float));
 
+        // Check for malloc failure
+    if (h_A == NULL || h_B == NULL)
+    {
+        printf("Memory allocation failed. Exiting early :(\n");
+        exit(EXIT_FAILURE);
+    }
+
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
