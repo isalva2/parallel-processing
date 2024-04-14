@@ -1,7 +1,6 @@
 /*
 Matrix Normalization using CUDA
-Compile with experimental flag
-"nvcc --expt-relaxed-constexpr matrixNormCUDA.cu"
+Compile with "nvcc matrixNormCUDA.cu"
 */
 
 #include <stdio.h>

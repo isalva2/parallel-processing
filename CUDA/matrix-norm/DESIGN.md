@@ -354,3 +354,14 @@ A parameter that was not evaluated during the initial experimental results are t
 |Maximum number of threads per block|1024|
 
 Documentation and best practices suggest that the optimal block size is a multiple of the GPU's warp size, and from the device properties the maximum number of threads per block is 1,024. Therefore, to evaluate the effects of launch configuration, number of grid size and block size configurations for a workload of `N = 45000` was evaluated for block sizes between 32 and 1,024.
+
+| Block Size | Grid Size | Threads | Runtime |
+|------------|-----------|---------|---------|
+| 32         | 1407      | 45024   | 4123.1  |
+| 64         | 704       | 45056   | 4067.09 |
+| 128        | 352       | 45056   | 4156.01 |
+| 256        | 176       | 45056   | 4095.68 |
+| 512        | 90        | 46080   | 4112.28 |
+| 1024       | 45        | 46080   | 4192.48 |
+
+Unfortunately, there does not appear to be any performance gains related to modification of the kernel launch configuration. While further efforts could be made to optimize the program, for workloads `N > 10000` the CUDA program performs better than the serial equivalent, at a practically constant runtime.
