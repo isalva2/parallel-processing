@@ -228,7 +228,7 @@ In addition to the development of the CUDA program `matrixNormCUDA.cu`, a compli
 The serial program is executed by specifying the workload size and random seed
 
 ```bash
-./matrixNormSerial.out
+$ ./matrixNormSerial.out
 Random seed = 2
 
 Initializing...
@@ -270,7 +270,7 @@ Runtime = 0.185 ms.
 and the CUDA program is executed the same way with the exception of additionally specifying the block size of the kernel before the random seed.
 
 ```bash
-./matrixNormCUDA.out 10 5 2
+$ ./matrixNormCUDA.out 10 5 2
 Random seed = 2
 
 Initializing...
