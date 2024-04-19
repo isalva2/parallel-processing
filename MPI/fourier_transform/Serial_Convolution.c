@@ -112,11 +112,11 @@ void c_fft1d(complex *r, int n, int isign)
 }
 
 #pragma endregion
-#pragma region // Global
+#pragma region // Global variables
 
 #define N 512
 complex A[N][N], B[N][N];
-complex OUT[N][N]
+complex OUT[N][N];
 
 #pragma endregion
 #pragma region //IO
@@ -149,17 +149,103 @@ void write_output()
     int row, col;
     FILE *OUT_real, *OUT_imag;
 
-    OUT_real = fopen("results/serial_results/out_1");
+    OUT_real = fopen("results/serial_results/out_1", "w");
+    OUT_imag = fopen("results/serial_results/out_2", "w");
+    
+    for (row = 0; row < N; row++)
+    {
+        for (col = 0; col < N; col++)
+        {
+            fprintf(OUT_real, "%e\t", OUT[row][col].r);
+            fprintf(OUT_imag, "%e\t", OUT[row][col].i);
+        }
+        fprintf(OUT_real, "\n");
+        fprintf(OUT_imag, "\n");
+    }
+
+    fclose(OUT_real);
+    fclose(OUT_imag);
+
 }
 
 #pragma endregion
 
-int  main()
+int main()
 {
+    int row, col;
+
+    // Intermediate transpose
+    complex A_T[N][N], B_T[N][N], OUT_temp;
+
+    // Read in A and B from memory
     read_data();
-    for (int i = 0; i < 10; i ++)
+
+    // Try 2D convolution on A first
+
+    // Do fft on rows of A and B
+    for (row = 0; row < N; row++)
     {
-        printf("%f\t", A[0][i].i);
+        c_fft1d(A[row], N, -1);
+        c_fft1d(B[row], N, -1);
+
+        // Transpose and store in new matrix
+        for (col = 0; col < N; col++)
+        {
+            A_T[col][row] = A[row][col];
+            B_T[col][row] = B[row][col];
+        }
     }
+
+    // Do fft on rows of A_T and B_T (columns of A and B)
+    for (row = 0; row < N; row++)
+    {
+        c_fft1d(A_T[row], N, -1);
+        c_fft1d(B_T[row], N, -1);
+
+        // Perform point wise multiplication and transpose (correct orientation) to OUT_temp
+        for (col = 0; col < N; col++)
+        {
+            OUT[col][row].r = A_T[row][col].r * B_T[row][col].r;
+            OUT[col][row].i = A_T[row][col].i * B_T[row][col].i;
+        }
+    }
+
+    // IFFT on OUT and store transposed to OUT
+    for (row = 0; row < N; row++)
+    {
+        c_fft1d(OUT[row], N, 1);
+    }
+
+    // Inplace transpose
+    for (row = 1; row < N; row++)
+    {
+        for (col = 0; col < row; col++)
+        {
+            OUT_temp = OUT[row][col];
+            OUT[row][col] = OUT[col][row];
+            OUT[col][row] = OUT_temp;
+        }
+    }
+
+    // Last IFFT and transpose store to OUT
+    for (row = 0; row < N; row++)
+    {
+        c_fft1d(OUT[row], N, 1);
+    }
+
+    // Inplace transpose
+    for (row = 1; row < N; row++)
+    {
+        for (col = 0; col < row; col++)
+        {
+            OUT_temp = OUT[row][col];
+            OUT[row][col] = OUT[col][row];
+            OUT[col][row] = OUT_temp;
+        }
+    }
+
+    // Write out
+    write_output();
+    
     return 0;
 }
