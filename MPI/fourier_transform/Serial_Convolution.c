@@ -112,9 +112,14 @@ void c_fft1d(complex *r, int n, int isign)
 }
 
 #pragma endregion
+#pragma region // Global
 
 #define N 512
 complex A[N][N], B[N][N];
+complex OUT[N][N]
+
+#pragma endregion
+#pragma region //IO
 
 void read_data()
 {
@@ -138,6 +143,16 @@ void read_data()
         }
     }
 }
+
+void write_output()
+{
+    int row, col;
+    FILE *OUT_real, *OUT_imag;
+
+    OUT_real = fopen("results/serial_results/out_1");
+}
+
+#pragma endregion
 
 int  main()
 {
