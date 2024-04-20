@@ -119,8 +119,8 @@ void read_data()
         {
             fscanf(A_real, "%f", &A[row][col].r);
             fscanf(B_real, "%f", &B[row][col].r);
-            A[row][col].i = 0.0;
-            B[row][col].i = 0.0;
+            // A[row][col].i = 0.0;
+            // B[row][col].i = 0.0;
         }
     }
     fclose(A_real);
