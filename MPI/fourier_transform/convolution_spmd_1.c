@@ -189,10 +189,15 @@ int main(int argc, char *argv[])
     int row, col, proc, worker_proc;
     MPI_Status status;
 
-    // Worker ID, root does not do any calculation
-    int workerid = myid - 1;
+    // Worker node variables
+    int block_size = (int) N / (numprocs);
+    complex worker_buffer[block_size * N];
 
-    // Create MPI datatype for complex numbers
+    #pragma region // Custom datatype declarations
+
+    /* 
+    Create MPI datatype for complex numbers
+    */
     MPI_Datatype complex_type;
     int lengths[2] = {1, 1};
     MPI_Aint offsets[2];
@@ -202,70 +207,113 @@ int main(int argc, char *argv[])
     MPI_Type_create_struct(2, lengths, offsets, types, &complex_type);
     MPI_Type_commit(&complex_type);    
 
-    // Create MPI datatype for row vectors of complex numbers
-    int block_size = (int) N / (numprocs - 1);
+    /* 
+    Create MPI datatype for row vectors of complex numbers
+    */
     MPI_Datatype row_type;
     MPI_Type_vector(block_size, block_size * N, 1, complex_type, &row_type);
     MPI_Type_commit(&row_type);
 
-    // Create MPI datatype for column vectors of complex numbers
+    /*
+    Create MPI datatype for column vectors of complex numbers
+    */
     MPI_Datatype column_type;
     MPI_Type_vector(N, block_size, N, complex_type, &column_type);
     MPI_Type_commit(&column_type);
 
+    /*
+    Flattened 1-D vector of complex_type
+    */
     MPI_Datatype flat_column;
     MPI_Type_contiguous(block_size * N, complex_type, &flat_column);
     MPI_Type_commit(&flat_column);
+
+    #pragma endregion
 
 
     // Root IO
     if (myid == 0)
     {
+        printf("Matrix A before calcs:\n\n");
         read_data();
+        print_A();
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("barrier\n");
+    printf("\n");
 
-    complex buffer[block_size * N];
 
     
-    // First calc block
-    int lower_bound, upper_bound;
+    /*
+    This communicate-calculate block:
+    1) Sends columns of A (1-D static block scheduling)
+    2) Performs column-wise calcs on A
+    3) Sends back columns of A TRANSPOSED
+
+    i.e. A -> calcs -> A_t
+    */
+    int lower_bound;
     if (myid == 0)
     {
+        // Send blocked columns of A to each proc
         for (proc = 1; proc < numprocs; proc++)
         {
-            lower_bound = (proc - 1) * N / (numprocs - 1);
+            //1-D static block scheduling
+            lower_bound = (proc) * N / (numprocs);
+            MPI_Send(&A[0][lower_bound], 1, column_type, proc, 2, MPI_COMM_WORLD);
+        }
 
-            MPI_Send(&A[0][lower_bound], 1, column_type, proc, 0, MPI_COMM_WORLD);
+        // Naive transpose in-place the first block_size-th columns of root's copy of A
+        complex a_temp;
+        for (row = 0; row < block_size; row ++)
+        {
+            for (col = 0; col < row; col++)
+            {
+                a_temp = A[row][col];
+                A[row][col] = A[col][row];
+                A[col][row] = a_temp;
+            }
+        }
+        // Calc using 1D-fft
+
+        // Receive worked on, transposed COLUMNS of A as ROWS (make A_t)
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Recv(&A[block_size * proc], 1, row_type, proc, 3, MPI_COMM_WORLD, &status);
         }
     }
     else
     {
+        // Receive columns of A from root as a flattened vector of complex
+        MPI_Recv(&worker_buffer, 1, flat_column, 0, 2, MPI_COMM_WORLD, &status);
+        
+        // Move complexes in 1-D buffer to workers' copies of A
         int buf_idx;
-
-        MPI_Recv(&buffer, 1, flat_column, 0, 0, MPI_COMM_WORLD, &status);
-
-        // Utility to move data from buffer to A
         for (buf_idx = 0; buf_idx < block_size * N; buf_idx++)
         {
-            A[buf_idx % block_size + block_size * workerid][(int)floor(buf_idx / block_size)] = buffer[buf_idx];
+            A[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer[buf_idx];
         }
+        // Worker calc using 1D-fft
+
+        // Send worked on, transposed, COLUMNS of A back as ROWS
+        MPI_Send(&A[block_size * myid], 1, row_type, 0, 3, MPI_COMM_WORLD);
     }
 
-    // Second calc block calc block
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myid == 0)
-    {
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            lower_bound = (proc - 1) * N / (numprocs - 1);
-            MPI_Recv(&A[lower_bound * N], 1, row_type, proc, 1, MPI_COMM_WORLD, &status);
-        }
-    }
-    else
-    {
-        lower_bound = (myid - 1) * N / (numprocs - 1);
-        MPI_Send(&A[lower_bound * N][0], 1, row_type, 0, 1, MPI_COMM_WORLD);
-    }
+    // This communication-calculation block sends along rows 
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if (myid == 0)
+    // {
+    //     for (proc = 1; proc < numprocs; proc++)
+    //     {
+    //         lower_bound = (proc - 1) * N / (numprocs - 1);
+    //         MPI_Recv(&A[lower_bound * N], 1, row_type, proc, 1, MPI_COMM_WORLD, &status);
+    //     }
+    // }
+    // else
+    // {
+    //     lower_bound = (myid - 1) * N / (numprocs - 1);
+    //     MPI_Send(&A[lower_bound * N][0], 1, row_type, 0, 1, MPI_COMM_WORLD);
+    // }
 
     if (myid == 0)
     {
@@ -278,16 +326,18 @@ int main(int argc, char *argv[])
     {
         if (myid == i)
         {
-            printf("\n\nbuffer of myidr = %d\n\n", myid);
-            for (int i = 0; i < block_size * N; i++)
-            {
-                printf("%8.2f\t", buffer[i].r);
-            }
             printf("\n");
+            printf("My ID = %d\n\n", myid);
             print_A();
-            
         }
         MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid == 0)
+    {
+        printf("\nMatrix A after Calc:\n");
+        print_A();
     }
 
     MPI_Type_free(&complex_type);
