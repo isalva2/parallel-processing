@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <mpi.h>
 
-#define N 8
+#define N 512
 int numprocs, myid;
 
 
@@ -111,8 +111,8 @@ void read_data()
 {
     int row, col;
     FILE *A_real, *B_real;
-    A_real = fopen(".test_data/1_im1", "r");
-    B_real = fopen(".test_data/1_im2", "r");
+    A_real = fopen("data/1_im1", "r");
+    B_real = fopen("data/1_im2", "r");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
         }
 
         // inverse 1D-fft on columns of OUT_T, aka ROWS OF OUT
-        for (row = 0); row < block_size; row++)
+        for (row = 0; row < block_size; row++)
         {
             c_fft1d(root_a[row], N, 1);
         }
@@ -502,7 +502,7 @@ int main(int argc, char *argv[])
         // Calc using 1D-fft on rows of OUT_T
         for (row = 0; row < block_size; row++)
         {
-            c_fft1D(root_a[row], N, 1);
+            c_fft1d(root_a[row], N, 1);
         }
 
         // Recv completed rows of OUT_T
@@ -528,7 +528,7 @@ int main(int argc, char *argv[])
             c_fft1d(OUT[row], N, 1);
         }
 
-        MPI_Send(&OUT[block_size * myid], 1 row_type, 0, 16, MPI_COMM_WORLD);
+        MPI_Send(&OUT[block_size * myid], 1, row_type, 0, 16, MPI_COMM_WORLD);
     }
 
     if (myid == 0)
@@ -552,20 +552,20 @@ int main(int argc, char *argv[])
     if (myid == 0)
     {
         write_A();
-        print_A();
+        // print_A();
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    for (int i = 1; i < numprocs; i++)
-    {
-        if (myid == i)
-        {
-            printf("\n");
-            printf("My ID = %d\n\n", myid);
-            print_A();
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // for (int i = 1; i < numprocs; i++)
+    // {
+    //     if (myid == i)
+    //     {
+    //         printf("\n");
+    //         printf("My ID = %d\n\n", myid);
+    //         print_A();
+    //     }
+    //     MPI_Barrier(MPI_COMM_WORLD);
+    // }
 
     MPI_Type_free(&complex_type);
     MPI_Type_free(&row_type);
