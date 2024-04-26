@@ -165,14 +165,17 @@ void write_A()
 
 void print_A()
 {
-    printf("Matrix:\n");
-    for (int i = 0; i < N; i++)
+    if (N < 10)
     {
-        for (int j = 0; j < N; j++)
+        printf("Matrix:\n");
+        for (int i = 0; i < N; i++)
         {
-            printf("%8.2f;   ", A[i][j].r);
+            for (int j = 0; j < N; j++)
+            {
+                printf("%8.2f;   ", A[i][j].r);
+            }
+            printf("\n");
         }
-        printf("\n");
     }
 }
 
@@ -186,12 +189,15 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
     // MPI variables
-    int row, col, proc, worker_proc;
+    int row, col, proc;
     MPI_Status status;
 
     // Worker node variables
     int block_size = (int) N / (numprocs);
-    complex worker_buffer[block_size * N];
+    complex worker_buffer_a[block_size * N];
+    complex worker_buffer_b[block_size * N];
+    complex root_a[block_size][N];
+    complex root_b[block_size][N];
 
     #pragma region // Custom datatype declarations
 
@@ -230,7 +236,6 @@ int main(int argc, char *argv[])
 
     #pragma endregion
 
-
     // Root IO
     if (myid == 0)
     {
@@ -239,81 +244,181 @@ int main(int argc, char *argv[])
         print_A();
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    printf("barrier\n");
-    printf("\n");
 
-
-    
     /*
-    This communicate-calculate block:
-    1) Sends columns of A (1-D static block scheduling)
-    2) Performs column-wise calcs on A
-    3) Sends back columns of A TRANSPOSED
-
-    i.e. A -> calcs -> A_t
+    This is first part 2D-fft along ROWS
     */
-    int lower_bound;
     if (myid == 0)
     {
-        // Send blocked columns of A to each proc
+        // Send rows of A and B to workers
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Send(&A[block_size * proc], 1, row_type, proc, 2, MPI_COMM_WORLD);
+            MPI_Send(&B[block_size * proc], 1, row_type, proc, 3, MPI_COMM_WORLD);
+        }
+
+        // 1D-fft
+        for (row = 0; row < block_size; row++)
+        {
+            c_fft1d(A[row], N, -1);
+            c_fft1d(B[row], N, -1);
+        }
+
+        // Recv worked on rows of A and B
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Recv(&A[block_size * myid], 1, row_type, proc, 4, MPI_COMM_WORLD, &status);
+            MPI_Recv(&B[block_size * myid], 1, row_type, proc, 5, MPI_COMM_WORLD, &status);
+
+        }
+    }
+    else
+    {
+        // Recv rows of A and B from root
+        MPI_Recv(&A[block_size * myid], 1, row_type, 0, 2, MPI_COMM_WORLD, &status);
+        MPI_Recv(&B[block_size * myid], 1, row_type, 0, 3, MPI_COMM_WORLD, &status);
+
+        // 1D-fft
+        for (row = block_size * myid; row < block_size * (myid + 1); row++)
+        {
+            c_fft1d(A[row], N, -1);
+            c_fft1d(B[row], N, -1);
+        }
+
+        // Send rows of A back
+        MPI_Send(&A[block_size * myid], 1, row_type, 0, 4, MPI_COMM_WORLD);
+        MPI_Send(&B[block_size * myid], 1, row_type, 0, 5, MPI_COMM_WORLD);
+    }
+    
+    /*
+    This is 2D-fft part 2 along COLUMNS
+    returns in-place A and B as TRANSPOSED
+    */
+    if (myid == 0)
+    {
+        // Send blocked columns of A and B to each proc
         for (proc = 1; proc < numprocs; proc++)
         {
             //1-D static block scheduling
-            lower_bound = (proc) * N / (numprocs);
-            MPI_Send(&A[0][lower_bound], 1, column_type, proc, 2, MPI_COMM_WORLD);
+            MPI_Send(&A[0][block_size * proc], 1, column_type, proc, 6, MPI_COMM_WORLD);
+            MPI_Send(&B[0][block_size * proc], 1, column_type, proc, 7, MPI_COMM_WORLD);
         }
 
-        // Naive transpose in-place the first block_size-th columns of root's copy of A
-        complex a_temp;
-        for (row = 0; row < block_size; row ++)
+        // Naive transpose block_size-th rows of A and B to root_a and root_b
+        for (row = 0; row < N; row++)
         {
-            for (col = 0; col < row; col++)
+            for (col = 0; col < block_size; col++)
             {
-                a_temp = A[row][col];
-                A[row][col] = A[col][row];
-                A[col][row] = a_temp;
+                root_a[col][row] = A[row][col];
+                root_b[col][row] = B[row][col];
             }
         }
-        // Calc using 1D-fft
 
-        // Receive worked on, transposed COLUMNS of A as ROWS (make A_t)
+        // Calc using 1D-fft
+        for (row = 0; row < block_size; row++)
+        {
+            c_fft1d(root_a[row], N, -1);
+            c_fft1d(root_b[row], N, -1);
+        }
+
+        // Naive transpose back rows of root_a to A_t and root_b to B_t
+        for (row = 0; row < block_size; row++)
+        {
+            for (col = 0; col < N; col++)
+            {
+                A[row][col] = root_a[row][col];
+                B[row][col] = root_b[row][col];
+            }
+        }
+
+        // Receive worked on, transposed COLUMNS of A and B as ROWS (make A_t and B_t at root)
         for (proc = 1; proc < numprocs; proc++)
         {
-            MPI_Recv(&A[block_size * proc], 1, row_type, proc, 3, MPI_COMM_WORLD, &status);
+            MPI_Recv(&A[block_size * proc], 1, row_type, proc, 8, MPI_COMM_WORLD, &status);
+            MPI_Recv(&B[block_size * proc], 1, row_type, proc, 9, MPI_COMM_WORLD, &status);
         }
     }
     else
     {
         // Receive columns of A from root as a flattened vector of complex
-        MPI_Recv(&worker_buffer, 1, flat_column, 0, 2, MPI_COMM_WORLD, &status);
+        MPI_Recv(&worker_buffer_a, 1, flat_column, 0, 6, MPI_COMM_WORLD, &status);
+        MPI_Recv(&worker_buffer_b, 1, flat_column, 0, 7, MPI_COMM_WORLD, &status);
         
         // Move complexes in 1-D buffer to workers' copies of A
-        int buf_idx;
-        for (buf_idx = 0; buf_idx < block_size * N; buf_idx++)
+        for (int buf_idx = 0; buf_idx < block_size * N; buf_idx++)
         {
-            A[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer[buf_idx];
+            A[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer_a[buf_idx];
+            B[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer_b[buf_idx];
         }
+
         // Worker calc using 1D-fft
+        for (row = block_size * myid; row < block_size * (myid + 1); row++)
+        {
+            c_fft1d(A[row], N, -1);
+            c_fft1d(B[row], N, -1);
+        }
 
         // Send worked on, transposed, COLUMNS of A back as ROWS
-        MPI_Send(&A[block_size * myid], 1, row_type, 0, 3, MPI_COMM_WORLD);
+        MPI_Send(&A[block_size * myid], 1, row_type, 0, 8, MPI_COMM_WORLD);
+        MPI_Send(&B[block_size * myid], 1, row_type, 0, 9, MPI_COMM_WORLD);
     }
 
-    // This communication-calculation block sends along rows 
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if (myid == 0)
-    // {
-    //     for (proc = 1; proc < numprocs; proc++)
-    //     {
-    //         lower_bound = (proc - 1) * N / (numprocs - 1);
-    //         MPI_Recv(&A[lower_bound * N], 1, row_type, proc, 1, MPI_COMM_WORLD, &status);
-    //     }
-    // }
-    // else
-    // {
-    //     lower_bound = (myid - 1) * N / (numprocs - 1);
-    //     MPI_Send(&A[lower_bound * N][0], 1, row_type, 0, 1, MPI_COMM_WORLD);
-    // }
+    /*
+    This is the point matrix multiplication (Hadamard product)
+    on the TRANSPOSED A and B.
+
+    Routine finishes with OUT with initial ORIENTATION
+
+    */
+    if (myid ==0)
+    {
+        // Send rows of TRANSPOSED A and B to workers
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Send(&A[block_size * proc], 1, row_type, proc, 10, MPI_COMM_WORLD);
+            MPI_Send(&B[block_size * proc], 1, row_type, proc, 11, MPI_COMM_WORLD);
+        }
+
+        // Hadamard product on complex numbers
+        for (row = 0; row < block_size; row++)
+        {
+            for (col = 0; col < N; col++)
+            {
+                OUT[row][col].r = A[row][col].r * B[row][col].r - A[row][col].i * B[row][col].i;
+                OUT[row][col].r = A[row][col].r * B[row][col].i + A[row][col].i * B[row][col].r;
+            }
+        }
+
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Recv(&A[block_size * proc], 1, row_type, proc, 12, MPI_COMM_WORLD, &status);
+        } 
+    }
+    else
+    {
+        // Recv rows of A and B from root
+        MPI_Recv(&A[block_size * myid], 1, row_type, 0, 10, MPI_COMM_WORLD, &status);
+        MPI_Recv(&B[block_size * myid], 1, row_type, 0, 11, MPI_COMM_WORLD, &status);
+
+        // Hadamard product on complex numbers
+        for (row = block_size * myid; row < block_size * (myid + 1); row++)
+        {
+            for (col = 0; col < N; col++)
+            {
+                OUT[row][col].r = A[row][col].r * B[row][col].r - A[row][col].i * B[row][col].i;
+                OUT[row][col].r = A[row][col].r * B[row][col].i + A[row][col].i * B[row][col].r;
+            }
+        }
+
+        // Send TRANSPOSED rows of OUT back to root
+        MPI_Send(&OUT[block_size * N], 1, row_type, 0, 12, MPI_COMM_WORLD);
+    }
+
+    // Last stretch, inverse 2D-fft, transpose then export
+
+
+
+    #pragma region // IO out
 
     if (myid == 0)
     {
@@ -333,17 +438,12 @@ int main(int argc, char *argv[])
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myid == 0)
-    {
-        printf("\nMatrix A after Calc:\n");
-        print_A();
-    }
-
     MPI_Type_free(&complex_type);
     MPI_Type_free(&row_type);
     MPI_Type_free(&column_type);
     MPI_Type_free(&flat_column);
     MPI_Finalize();
     exit(0);
+
+    #pragma endregion
 }
