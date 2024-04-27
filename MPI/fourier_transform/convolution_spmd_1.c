@@ -6,8 +6,6 @@
 #include <mpi.h>
 
 #define N 512
-int numprocs, myid;
-
 
 // Complex struct
 typedef struct {float r; float i;} complex;
@@ -131,7 +129,7 @@ void write_output()
 {
     int row, col;
     FILE *OUT_real;
-    OUT_real = fopen("results/spmd_1/serial_out_1", "w");
+    OUT_real = fopen("results/spmd_1/spmd_1", "w");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
@@ -167,7 +165,7 @@ void print_A()
 {
     if (N < 10)
     {
-        printf("Matrix:\n");
+        printf("Matrix A:\n");
         for (int i = 0; i < N; i++)
         {
             for (int j = 0; j < N; j++)
@@ -176,13 +174,55 @@ void print_A()
             }
             printf("\n");
         }
+    printf("\n");
+    printf("\n");
     }
 }
+
+void print_B()
+{
+    if (N < 10)
+    {
+        printf("Matrix B:\n");
+        for (int i = 0; i < N; i++)
+        {
+            for (int j = 0; j < N; j++)
+            {
+                printf("%8.2f;   ", B[i][j].r);
+            }
+            printf("\n");
+        }
+    printf("\n");
+    printf("\n");
+    }
+}
+
+void print_OUT()
+{
+    if (N < 10)
+    {
+        printf("Matrix OUT:\n");
+        for (int i = 0; i < N; i++)
+        {
+            for (int j = 0; j < N; j++)
+            {
+                printf("%8.2f;   ", OUT[i][j].r);
+            }
+            printf("\n");
+        }
+    }
+    printf("\n");
+    printf("\n");
+}
+
+
 
 #pragma endregion
 
 int main(int argc, char *argv[])
 {
+    int myid, numprocs;
+
     // Initialize MPI environment
     MPI_Init(&argc , &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -239,9 +279,7 @@ int main(int argc, char *argv[])
     // Root IO
     if (myid == 0)
     {
-        printf("Matrix A before calcs:\n\n");
         read_data();
-        // print_A();
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -289,7 +327,7 @@ int main(int argc, char *argv[])
         MPI_Send(&A[block_size * myid], 1, row_type, 0, 4, MPI_COMM_WORLD);
         MPI_Send(&B[block_size * myid], 1, row_type, 0, 5, MPI_COMM_WORLD);
     }
-    
+    MPI_Barrier(MPI_COMM_WORLD);    
     /*
     This is 2D-fft part 2 along COLUMNS
     returns in-place A_T and B_T as TRANSPOSED
@@ -362,11 +400,10 @@ int main(int argc, char *argv[])
         MPI_Send(&A[block_size * myid], 1, row_type, 0, 8, MPI_COMM_WORLD);
         MPI_Send(&B[block_size * myid], 1, row_type, 0, 9, MPI_COMM_WORLD);
     }
-
+    MPI_Barrier(MPI_COMM_WORLD);
     /*
     This is the point matrix multiplication (Hadamard product)
     on A_T and B_T
-
     Routine returns OUT_T
     */
     if (myid ==0)
@@ -391,7 +428,7 @@ int main(int argc, char *argv[])
         for (proc = 1; proc < numprocs; proc++)
         {
             MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, 12, MPI_COMM_WORLD, &status);
-        } 
+        }
     }
     else
     {
@@ -412,124 +449,153 @@ int main(int argc, char *argv[])
         // Send TRANSPOSED rows of OUT back to root
         MPI_Send(&OUT[block_size * myid], 1, row_type, 0, 12, MPI_COMM_WORLD);
     }
-
+    MPI_Barrier(MPI_COMM_WORLD);
     /*
-    INVERSE 2D FFT
-
-    This part of the routine takes OUT_T and does the following:
-    1) Root sends TRANSPOSED OUT matrix to workers using column_type data type - converts to OUT
-    */
-    // if (myid == 0)
-    // {
-    //     // Send columns of OUT_T to workers (ROWS OF OUT)
-    //     for (proc = 1; proc < numprocs; proc++)
-    //     {
-    //         MPI_Send(&OUT[0][block_size * proc], 1, column_type, proc, 13, MPI_COMM_WORLD);
-    //     }
-
-    //     // Naive transpose block_size-th cols of OUT_T to root_a
-    //     for (row = 0; row < N; row++)
-    //     {
-    //         for (col = 0; col < block_size; col++)
-    //         {
-    //             root_a[col][row] = OUT[row][col];
-    //         }
-    //     }
-
-    //     // inverse 1D-fft on columns of OUT_T, aka ROWS OF OUT
-    //     for (row = 0; row < block_size; row++)
-    //     {
-    //         c_fft1d(root_a[row], N, 1);
-    //     }
-
-    //     // move first block_size-th columns of OUT_T back to first block_size-th rows of OUT
-    //     for (row = 0; row < block_size; row++)
-    //     {
-    //         for (col = 0; col < N; col++)
-    //         {
-    //             OUT[row][col] = root_a[row][col];
-    //         }
-    //     }
-
-    //     // Recv rows of OUT from root
-    //     for (proc = 1; proc < numprocs; proc++)
-    //     {
-    //         MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, 14, MPI_COMM_WORLD, &status);
-    //     }
-    // }
-    // else
-    // {
-    //     // Receive columns of OUT_T, aka ROWS of OUT
-    //     MPI_Recv(&worker_buffer_a, 1, flat_column, 0, 13, MPI_COMM_WORLD, &status);
-
-    //      // Move complexes in 1-D buffer to workers' copies of OUT
-    //     for (int buf_idx = 0; buf_idx < block_size * N; buf_idx++)
-    //     {
-    //         OUT[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer_a[buf_idx];
-    //     }
-
-    //     // inverse 1D-fft on columns of OUT_T, aka ROWS OF OUT
-    //     for (row = block_size * myid; row < block_size * (myid + 1); row++)
-    //     {
-    //         c_fft1d(OUT[row], N, 1);
-    //     }
-
-    //     // Send back rows of OUT to root
-    //     MPI_Send(&OUT[block_size * myid], 1, row_type, 0, 14, MPI_COMM_WORLD);
-    // }
-
-    /*
-    INVERSE 1D-FFT ON COLUMNS OF OUT
+    The last inverse 2D-fft is not working, 
+    so building a new routine here hahaha :(
     */
 
-    // if (myid == 0)
-    // {
-    //     // Send columns of OUT to workers
-    //     for (proc = 1; proc < numprocs; proc++)
-    //     {
-    //         MPI_Send(&OUT[0][block_size * proc], 1, column_type, proc, 15, MPI_COMM_WORLD);
-    //     }
 
-    //     // Naive transpose block_size-th columns of OUT to root_a
-    //     for (row = 0; row < N; row++)
-    //     {
-    //         for (col = 0; col < block_size; col++)
-    //         {
-    //             root_a[col][row] = OUT[row][col];
-    //         }
-    //     }
+    // First inverse 1d fft on rows of OUT
+    if (myid == 0)
+    {
+        // Send COLUMNS OF OUT_T (rows of OUT)
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Send(&OUT[0][block_size * proc], 1, column_type, proc, 13, MPI_COMM_WORLD);
+        }
 
-    //     // Calc using 1D-fft on rows of OUT_T
-    //     for (row = 0; row < block_size; row++)
-    //     {
-    //         c_fft1d(root_a[row], N, 1);
-    //     }
+        // Naive transpose columns of OUT_T to rows of root_a (root's portion of OUT)
+        for (row = 0; row < N; row++)
+        {
+            for (col = 0; col < block_size; col++)
+            {
+                root_a[col][row] = OUT[row][col];
+            }
+        }
 
-    //     // Recv completed rows of OUT_T
-    //     for (proc = 1; proc < numprocs; proc++)
-    //     {
-    //         MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, 16, MPI_COMM_WORLD, &status);
-    //     }
-    // }
-    // else
-    // {
-    //     // Recv columns of OUT as flat column
-    //     MPI_Recv(&worker_buffer_a, 1, flat_column, 0, 15, MPI_COMM_WORLD, &status);
+        // Inverse 1D-fft on rows of OUT in root_a
+        for (row = 0; row < block_size; row++)
+        {
+            c_fft1d(root_a[row], N, 1);
+        }
 
-    //     // Move complexes in 1D buffer to workers' rows of OUT_T
-    //     for (int buf_idx = 0; buf_idx < block_size * N; buf_idx++)
-    //     {
-    //         OUT[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer_a[buf_idx];
-    //     }
+        // Move worked on rows in root_a back to OUT
+        for (row = 0; row < block_size; row++)
+        {
+            for (col = 0; col < N; col++)
+            {
+                OUT[row][col] = root_a[row][col];
+            }
+        }
 
-    //     // Worker calc using inverse 1D-fft on rows of OUT_T
-    //     for (row = block_size * myid; row < block_size * (myid + 1); row++)
-    //     {
-    //         c_fft1d(OUT[row], N, 1);
-    //     }
+        // Recv worked on rows of OUT from workers
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, 14, MPI_COMM_WORLD, &status);
+        }
+    }
+    else
+    {
+        // Recv COLUMNS of OUT_T (rows of OUT) to worker_buffer
+        MPI_Recv(&worker_buffer_a, 1, flat_column, 0, 13, MPI_COMM_WORLD, &status);
 
-    //     MPI_Send(&OUT[block_size * myid], 1, row_type, 0, 16, MPI_COMM_WORLD);
-    // }
+        // Move rows of OUT in buffer to rows of OUT
+        for (int buf_idx = 0; buf_idx < block_size * N; buf_idx++)
+        {
+            OUT[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer_a[buf_idx];
+        }
+
+        // Work on assigned rows of OUT
+        for (row = block_size * myid; row < block_size * (myid + 1); row++)
+        {
+            c_fft1d(OUT[row], N, 1);
+        }
+
+        // Send worked on rows of OUT to root
+        MPI_Send(&OUT[block_size * myid], 1, row_type, 0, 14, MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Second inverse 1D fft on columns of OUT
+    if (myid == 0)
+    {
+        // Send columns of OUT
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Send(&OUT[0][block_size * proc], 1, column_type, proc, 15, MPI_COMM_WORLD);
+        }
+
+        // Naive transpose columns of OUT_T to rows of root_a (root's portion of OUT)
+        for (row = 0; row < N; row++)
+        {
+            for (col = 0; col < block_size; col++)
+            {
+                root_a[col][row] = OUT[row][col];
+            }
+        }
+
+        // Inverse 1D-fft on rows of OUT in root_a
+        for (row = 0; row < block_size; row++)
+        {
+            c_fft1d(root_a[row], N, 1);
+        }
+
+        // Move worked on rows in root_a back to OUT
+        for (row = 0; row < block_size; row++)
+        {
+            for (col = 0; col < N; col++)
+            {
+                OUT[row][col] = root_a[row][col];
+            }
+        }
+
+        // Recv worked on rows of OUT from workers
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, 16, MPI_COMM_WORLD, &status);
+        }
+
+    }
+    else
+    {
+        // Recv COLUMNS of OUT_T (rows of OUT) to worker_buffer
+        MPI_Recv(&worker_buffer_a, 1, flat_column, 0, 15, MPI_COMM_WORLD, &status);
+
+        // Move rows of OUT in buffer to rows of OUT
+        for (int buf_idx = 0; buf_idx < block_size * N; buf_idx++)
+        {
+            OUT[buf_idx % block_size + block_size * myid][(int)floor(buf_idx / block_size)] = worker_buffer_a[buf_idx];
+        }
+
+        // Work on assigned rows of OUT
+        for (row = block_size * myid; row < block_size * (myid + 1); row++)
+        {
+            c_fft1d(OUT[row], N, 1);
+        }
+
+        // Send worked on rows of OUT to root
+        MPI_Send(&OUT[block_size * myid], 1, row_type, 0, 16, MPI_COMM_WORLD);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Check values
+    if (myid == 0)
+    {
+        printf("this is is %d\n\n", myid);
+        print_A();
+        print_OUT();
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (myid != 0)
+    {
+        printf("this is is %d\n\n", myid);
+        print_A();
+        print_OUT();
+    }
+
 
     if (myid == 0)
     {
@@ -545,27 +611,13 @@ int main(int argc, char *argv[])
             }
         }
     }
-    
 
     #pragma region // IO out
 
     if (myid == 0)
     {
-        write_A();
-        // print_A();
+        write_output();
     }
-
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // for (int i = 1; i < numprocs; i++)
-    // {
-    //     if (myid == i)
-    //     {
-    //         printf("\n");
-    //         printf("My ID = %d\n\n", myid);
-    //         print_A();
-    //     }
-    //     MPI_Barrier(MPI_COMM_WORLD);
-    // }
 
     MPI_Type_free(&complex_type);
     MPI_Type_free(&row_type);
