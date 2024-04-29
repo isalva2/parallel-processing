@@ -100,7 +100,7 @@ void c_fft1d(complex *r, int      n, int      isign)
 #pragma endregion
 #pragma region // Global variables
 
-#define N 512
+#define N 8
 complex A[N][N], B[N][N];
 complex OUT[N][N];
 
@@ -111,8 +111,8 @@ void read_data()
 {
     int row, col;
     FILE *A_real, *B_real;
-    A_real = fopen("data/2_im1", "r");
-    B_real = fopen("data/2_im2", "r");
+    A_real = fopen("data/test_data/1_im1", "r");
+    B_real = fopen("data/test_data/2_im2", "r");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
@@ -131,7 +131,7 @@ void write_output()
 {
     int row, col;
     FILE *OUT_real;
-    OUT_real = fopen("results/serial_results/serial_out_1", "w");
+    OUT_real = fopen("serial_test", "w");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
@@ -144,6 +144,21 @@ void write_output()
 }
 
 #pragma endregion
+
+void write_file(char path[], complex matrix[N][N])
+{
+    int row, col;
+    FILE *fp = fopen(path, "w");
+    for (row = 0; row < N; row++)
+    {
+        for (col = 0; col < N; col++)
+        {
+            fprintf(fp, "%e\t", matrix[row][col].r);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
 
 int main()
 {
