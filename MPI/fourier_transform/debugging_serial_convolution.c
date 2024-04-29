@@ -116,6 +116,8 @@ void read_data()
     FILE *A_real, *B_real;
     A_real = fopen("data/test_data/1_im1", "r");
     B_real = fopen("data/test_data/1_im2", "r");
+    // A_real = fopen("data/2_im1", "r");
+    // B_real = fopen("data/2_im2", "r");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
@@ -149,195 +151,6 @@ void write_output()
 #pragma endregion
 #pragma region // Debugging
 
-void debug_write_A()
-{
-    int row, col;
-    FILE *OUT_real;
-    OUT_real = fopen("debug_serial_A", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", A[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real);
-}
-
-void debug_write_A_T()
-{
-    int row, col;
-    FILE *OUT_real;
-    OUT_real = fopen("results/debugging/debug_serial_A_T", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", A_T[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real);
-}
-
-void debug_write_OUT()
-{
-    int row, col;
-    FILE *OUT_real;
-    OUT_real = fopen("results/debugging/debug_serial_OUT", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", OUT[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real);
-}
-
-void full_debug()
-{
-    int row, col;
-    FILE *OUT_real;
-    OUT_real = fopen("results/debugging/debug_serial_OUT", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", OUT[row][col].i);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/debug_serial_A", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", A[row][col].i);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/debug_serial_B", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", B[row][col].i);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-
-    OUT_real = fopen("results/debugging/real/debug_serial_OUT", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", OUT[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/real/debug_serial_A", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", A[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/real/debug_serial_B", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", B[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-}
-
-void full_debug_T()
-{
-    int row, col;
-    FILE *OUT_real;
-    OUT_real = fopen("results/debugging/debug_serial_OUT", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", OUT[row][col].i);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/debug_serial_A", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", A_T[row][col].i);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/debug_serial_B", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", B_T[row][col].i);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-
-        OUT_real = fopen("results/debugging/real/debug_serial_OUT", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", OUT[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/real/debug_serial_A", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", A_T[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-    
-    OUT_real = fopen("results/debugging/real/debug_serial_B", "w");
-    for (row = 0; row < N; row++)
-    {
-        for (col = 0; col < N; col++)
-        {
-            fprintf(OUT_real, "%e\t", B_T[row][col].r);
-        }
-        fprintf(OUT_real, "\n");
-    }
-    fclose(OUT_real); 
-}
 
 #pragma endregion
 
@@ -379,8 +192,8 @@ int main()
     }
 
     // // Checking Debug
-    // write_file("data/working/serial_B", B);
-    // write_file("data/working/serial_A", A);
+    // write_file("serial_B", B);
+    // write_file("serial_A", A);
 
     // Do fft on rows of A_T and B_T (columns of A and B)
     for (row = 0; row < N; row++)
@@ -393,8 +206,9 @@ int main()
     // debug_write_A_T();
     // debug_write_OUT();
     // full_debug_T();
-    write_file("data/working/serial_B_T", B_T);
-    write_file("data/working/serial_A_T", A_T);
+    // write_file("serial_A_T", A_T);
+    // write_file("serial_A", A_T);
+    // write_file("serial_B", B_T);
 
     for (row = 0; row < N; row++)
     {
@@ -406,6 +220,7 @@ int main()
             OUT[col][row].i = A_T[row][col].r * B_T[row][col].i + A_T[row][col].i * B_T[row][col].r;
         }
     }
+    // write_file("serial_OUT", OUT);
 
     // full_debug();
 
@@ -446,6 +261,7 @@ int main()
     // Write out
     // debug_write_OUT();
     // full_debug();
+    write_file("OUT_SERIAL",OUT);
     
     return 0;
 }
