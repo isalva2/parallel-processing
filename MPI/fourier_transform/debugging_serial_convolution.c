@@ -379,8 +379,8 @@ int main()
     }
 
     // // Checking Debug
-    write_file("serial_b", B);
-    write_file("serial_A", A);
+    // write_file("data/working/serial_B", B);
+    // write_file("data/working/serial_A", A);
 
     // Do fft on rows of A_T and B_T (columns of A and B)
     for (row = 0; row < N; row++)
@@ -393,6 +393,8 @@ int main()
     // debug_write_A_T();
     // debug_write_OUT();
     // full_debug_T();
+    write_file("data/working/serial_B_T", B_T);
+    write_file("data/working/serial_A_T", A_T);
 
     for (row = 0; row < N; row++)
     {

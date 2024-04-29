@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <mpi.h>
 
-#define N 8
+#define N 512
 
 #pragma region // MARK: source 1D-fft
 
@@ -102,11 +102,10 @@ void c_fft1d(complex *r, int      n, int      isign)
 
 void read_file(char path[20], complex matrix[N][N])
 {
-    int row, col;
     FILE *fp = fopen(path, "r");
-    for (row = 0; row < N; row++)
+    for (int row = 0; row < N; row++)
     {
-        for (col = 0; col < N; col++)
+        for (int col = 0; col < N; col++)
         {
             fscanf(fp, "%f", &matrix[row][col].r);
             matrix[row][col].i = 0.0;
@@ -117,11 +116,10 @@ void read_file(char path[20], complex matrix[N][N])
 
 void write_file(char path[], complex matrix[N][N])
 {
-    int row, col;
     FILE *fp = fopen(path, "w");
-    for (row = 0; row < N; row++)
+    for (int row = 0; row < N; row++)
     {
-        for (col = 0; col < N; col++)
+        for (int col = 0; col < N; col++)
         {
             fprintf(fp, "%e\t", matrix[row][col].r);
         }
@@ -133,15 +131,25 @@ void write_file(char path[], complex matrix[N][N])
 #pragma endregion
 #pragma region // MARK: Helper functions
 
-void transpose(complex a[N][N], a_T[N][N])
+void transpose(complex a[N][N], complex a_T[N][N])
 {
-    int row, col;
-    for (row = 0; row < N; row++)
+    for (int row = 0; row < N; row++)
     {
-        for (col = 0; col < N; col++)
+        for (int col = 0; col < N; col++)
         {
-            if (row != col)
-                a_T[row][col] = a[col][row];
+            a_T[row][col] = a[col][row];
+        }
+    }
+}
+
+void hadamard_product(complex a[N][N], complex b[N][N], complex out[N][N], int lower_bound, int upper_bound)
+{
+    for (int row = lower_bound; row < upper_bound; row++)
+    {
+        for (int col = 0; col < N; col++)
+        {
+            out[row][col].r = a[row][col].r * b[row][col].r - a[row][col].i * b[row][col].i; 
+            out[row][col].i = a[row][col].r * b[row][col].i + a[row][col].i * b[row][col].r;
         }
     }
 }
@@ -151,11 +159,10 @@ void transpose(complex a[N][N], a_T[N][N])
 
 void print_matrix(complex matrix[N][N], int id)
 {
-    int row, col;
     printf("Matrix: %d\n", id);
-    for (row = 0; row < N; row++)
+    for (int row = 0; row < N; row++)
     {
-        for (col = 0; col < N; col++)
+        for (int col = 0; col < N; col++)
         {
             printf("%6.2f;\t", matrix[row][col].r);
         }
@@ -168,9 +175,13 @@ void print_matrix(complex matrix[N][N], int id)
 int main(int argc, char *argv[])
 {
     // File paths
-    char image_1[] = "data/test_data/1_im1";
-    char image_2[] = "data/test_data/1_im2";
-    char output[] = "data/results/output";
+    char image_1[] = "data/1_im1";
+    char image_2[] = "data/1_im2";
+    char output[] = "output";
+
+    // char image_1[] = "data/test_data/1_im1";
+    // char image_2[] = "data/test_data/1_im2";
+    // char output[] = "data/results/output";
 
     // MPI Variables
     int myid, numprocs;
@@ -189,7 +200,9 @@ int main(int argc, char *argv[])
     int upper_bound = lower_bound + block_size;
 
     // Initialize variables
-    complex A[N][N], B[N][N];
+    complex A[N][N], B[N][N], OUT[N][N];
+    complex A_T[N][N], B_T[N][N];
+    
 
     // Custom complex MPI datatype
     MPI_Datatype complex_type;
@@ -214,7 +227,7 @@ int main(int argc, char *argv[])
         read_file(image_1, A);
     }
 
-    // First 1D-fft on A and B on rows
+    // MARK: First 1D-fft on A and B on rows
     if (myid == 0)
     {
         // root gets data
@@ -227,48 +240,77 @@ int main(int argc, char *argv[])
             MPI_Send(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD);
             MPI_Send(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD);
         }
-
-        for (row = lower_bound; row < upper_bound; row++)
-        {
-            c_fft1d(A[row], N, -1);
-            c_fft1d(B[row], N, -1);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        
-        // Recv data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Recv(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
-            MPI_Recv(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD, &status);
-        }
-        write_file("test_A", A);
-        write_file("test_B", B);
     }
     else
     {
         MPI_Recv(&A[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD, &status);
         MPI_Recv(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD, &status);
         
-        for (row = lower_bound; row < upper_bound; row++)
-        {
-            c_fft1d(A[row], N, -1);
-            c_fft1d(B[row], N, -1);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
+    }
 
+    for (row = lower_bound; row < upper_bound; row++)
+    {
+        c_fft1d(A[row], N, -1);
+        c_fft1d(B[row], N, -1);
+    }
+
+    if (myid == 0)
+    {
+                
         // Recv data
+        for (proc = 1; proc < numprocs; proc++)
+        {
+            MPI_Recv(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
+            MPI_Recv(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD, &status);
+        }
+    }
+    else
+    {
         MPI_Send(&A[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
         MPI_Send(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD);
     }
 
-    // Second 1D-fft on A_T and B_T (Columns of A and B)
-    if (myid == 0)
-    {
-        // Transpose A and B
-        transpose(A, A_T);
-        transpose(B, B_T);
+    // // MARK: Second 1D-fft on A_T and B_T (Columns of A and B)
+    // if (myid == 0)
+    // {
+    //     // Transpose A and B
+    //     transpose(A, A_T);
+    //     transpose(B, B_T);
 
-        
-    }
+    //     // Send data
+    //     for (proc = 1; proc < numprocs; proc++)
+    //     {
+    //         MPI_Send(&A_T[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD);
+    //         MPI_Send(&B_T[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD);
+    //     }
+    // }
+    // else
+    // {
+    //     MPI_Recv(&A_T[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD, &status);
+    //     MPI_Recv(&B_T[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD, &status);
+    // }
 
+    // for (row = lower_bound; row < upper_bound; row++)
+    // {
+    //     c_fft1d(A_T[row], N, -1);
+    //     c_fft1d(B_T[row], N, -1);
+    // }
+
+    // if (myid == 0)
+    // {
+    //     for (proc = 1; proc < numprocs; proc++)
+    //     {
+    //         MPI_Recv(&A_T[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
+    //         MPI_Recv(&B_T[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD, &status);
+    //     }
+    //     write_file("test1", A_T);
+    //     write_file("test2", B_T);
+    // }
+    // else
+    // {
+    //     MPI_Send(&A_T[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
+    //     MPI_Send(&B_T[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD);
+    // }
+
+    // Mark: Hadamard Product on A_T and B_T
 }
