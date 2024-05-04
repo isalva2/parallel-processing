@@ -7,7 +7,7 @@
 
 #define N 512
 
-#pragma region // MARK: source 1D-fft
+// MARK: source 1D-fft
 
 /*
  ------------------------------------------------------------------------
@@ -97,8 +97,7 @@ void c_fft1d(complex *r, int      n, int      isign)
    }
 }
 
-#pragma endregion
-#pragma region // MARK: IO
+// MARK: IO
 
 void read_file(char path[20], complex matrix[N][N])
 {
@@ -129,8 +128,7 @@ void write_file(char path[], complex matrix[N][N])
     fclose(fp);
 }
 
-#pragma endregion
-#pragma region // MARK: Helper functions
+// MARK: Helper functions
 
 void transpose(complex a[N][N])
 {
@@ -158,8 +156,7 @@ void hadamard_product(complex a[N][N], complex b[N][N], complex out[N][N], int l
     }
 }
 
-#pragma endregion
-#pragma region // MARK: Debug
+// MARK: Debug
 
 void print_matrix(complex matrix[N][N], int id)
 {
@@ -174,18 +171,12 @@ void print_matrix(complex matrix[N][N], int id)
     }
 }
 
-#pragma endregion
-
 int main(int argc, char *argv[])
 {
     // File paths
-    // char image_1[] = "data/test_data/1_im1";
-    // char image_2[] = "data/test_data/1_im2";
-    // char output[] = "output";
-
-    char image_1[] = "data/2_im1";
-    char image_2[] = "data/2_im2";
-    // char output[] = "data/results/output";
+    char image_1[] = "data/1_im1";
+    char image_2[] = "data/1_im2";
+    char output[] = "data/results/experimental_out_1";
 
     // MPI Variables
     int myid, numprocs;
@@ -216,7 +207,7 @@ int main(int argc, char *argv[])
     double start_last_calc;         // Last calc
 
 
-    // Custom complex MPI datatype
+    // MARK: Custom MPI Datatypes
     MPI_Datatype complex_type;
     int lengths[2] = {1, 1};
     MPI_Aint offsets[2];
@@ -460,7 +451,7 @@ int main(int argc, char *argv[])
         end_t = MPI_Wtime();
 
         // Write out
-        write_file("test_output", OUT);
+        write_file(output, OUT);
 
         // Print out times
         double calc1 = stop_calc1 - start_calc1;
