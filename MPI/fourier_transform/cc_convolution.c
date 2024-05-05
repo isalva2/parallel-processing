@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     // File paths
     char image_1[] = "data/2_im1";
     char image_2[] = "data/2_im2";
-    char output[] = "data/results/point_to_point";
+    char output[] = "data/results/model2_out2";
 
     // MPI Variables
     int myid, numprocs;
@@ -175,11 +175,11 @@ int main(int argc, char *argv[])
     // Scheduling
     int row, col, proc;
     int block_size = (int) N/numprocs;
-    int lower_bound = block_size * myid;
-    int upper_bound = lower_bound + block_size;
+    int block_count = block_size * N;
 
     // Initialize variables
     complex A[N][N], B[N][N], OUT[N][N];
+    complex buffer1[block_size][N], buffer2[block_size][N];
 
     // MARK: Timing 
     double start_t, end_t;
@@ -203,226 +203,120 @@ int main(int argc, char *argv[])
     MPI_Type_create_struct(2, lengths, offsets, types, &complex_type);
     MPI_Type_commit(&complex_type);
 
-    // Custom vector MPI datatype
-    MPI_Datatype row_type;
-    MPI_Type_vector(block_size, N, N, complex_type, &row_type);
-    MPI_Type_commit(&row_type);
-
     // IO Printout MARK: Start 
     if (myid == 0)
     {
         printf("2D Convolution\n");
-        printf("Computing using point-to-point SPMD model with %d processes\n", numprocs);
+        printf("Computing using collective call SPMD model with %d processes\n", numprocs);
         printf("Starting...\n\n");
     }
 
-    // Send/recv tags
-    int tag1= 1, tag2 = 2;
-    MPI_Status status;
-
-    // MARK: AB 1D-fft 1
     if (myid == 0)
     {
-        // root gets data
         read_file(image_1, A);
         read_file(image_2, B);
-
-        // Start clock after input
-        start_t = MPI_Wtime();
-
-        // Send data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Send(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD);
-            MPI_Send(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD);
-        }
-
-        // Record first calc
-        start_calc1 = MPI_Wtime();
-    }
-    else
-    {
-        MPI_Recv(&A[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD, &status);
-        MPI_Recv(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD, &status);
-        
+        start_t = MPI_Wtime(); // Start the clock
     }
 
-    for (row = lower_bound; row < upper_bound; row++)
+    MPI_Scatter(A, block_count, complex_type, &buffer1, block_count, complex_type, 0, MPI_COMM_WORLD);
+    MPI_Scatter(B, block_count, complex_type, &buffer2, block_count, complex_type, 0, MPI_COMM_WORLD);
+
+    if (myid == 0)
+        start_calc1 = MPI_Wtime(); // Record calc
+
+    // MARK: fft on A & B
+    for (row = 0; row < block_size; row++)
     {
-        c_fft1d(A[row], N, -1);
-        c_fft1d(B[row], N, -1);
+        c_fft1d(buffer1[row], N, -1);
+        c_fft1d(buffer2[row], N, -1);
     }
 
     if (myid == 0)
-    {
-        // Record first calc
         stop_calc1 = MPI_Wtime();
 
-        // Recv data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Recv(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
-            MPI_Recv(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD, &status);
-        }
-    }
-    else
-    {
-        MPI_Send(&A[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
-        MPI_Send(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD);
-    }
+    MPI_Gather(&buffer1, block_count, complex_type, A, block_count, complex_type, 0, MPI_COMM_WORLD);
+    MPI_Gather(&buffer2, block_count, complex_type, B, block_count, complex_type, 0, MPI_COMM_WORLD);
 
-    // MARK: AB 1D-fft 2
     if (myid == 0)
     {
-        // Record calc
-        start_calc2 = MPI_Wtime();
+        start_calc2 = MPI_Wtime(); // Record calc
 
         transpose(A);
         transpose(B);
 
-        // Record calc
         stop_calc2 = MPI_Wtime();
-
-        // Send data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Send(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD);
-            MPI_Send(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD);
-        }
-
-        // Record calc
-        start_calc3 = MPI_Wtime();
-    }
-    else
-    {
-        MPI_Recv(&A[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD, &status);
-        MPI_Recv(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD, &status);
     }
 
-    for (row = lower_bound; row < upper_bound; row++)
+    MPI_Scatter(A, block_count, complex_type, &buffer1, block_count, complex_type, 0, MPI_COMM_WORLD);
+    MPI_Scatter(B, block_count, complex_type, &buffer2, block_count, complex_type, 0, MPI_COMM_WORLD);
+
+    if (myid == 0)
+        start_calc3 = MPI_Wtime(); // Record calc
+
+    // MARK: fft on A & B
+    for (row = 0; row < block_size; row++)
     {
-        c_fft1d(A[row], N, -1);
-        c_fft1d(B[row], N, -1);
+        c_fft1d(buffer1[row], N, -1);
+        c_fft1d(buffer2[row], N, -1);
     }
 
     if (myid == 0)
-    {
-        // Record calc
         stop_calc3 = MPI_Wtime();
 
-        // Recv data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Recv(&A[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
-            MPI_Recv(&B[block_size * proc], 1, row_type, proc, tag2, MPI_COMM_WORLD, &status);
-        }
+    MPI_Gather(&buffer1, block_count, complex_type, A, block_count, complex_type, 0, MPI_COMM_WORLD);
+    MPI_Gather(&buffer2, block_count, complex_type, B, block_count, complex_type, 0, MPI_COMM_WORLD);
 
-    }
-    else
-    {
-        MPI_Send(&A[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
-        MPI_Send(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD);
-    }
-
-    // MARK: Matrix mult
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MARK: Matrix Mult
     if (myid == 0)
     {
-        // Record calc
-        start_calc4 = MPI_Wtime();
+        start_calc4 = MPI_Wtime(); // Start calc
 
         hadamard_product(A, B, OUT, 0, N);
         transpose(OUT);
-        
-        // Record calc
+
         stop_calc4 = MPI_Wtime();
     }
 
-    // MARK: OUT 1D-fft 1
+    MPI_Scatter(OUT, block_count, complex_type, &buffer1, block_count, complex_type, 0, MPI_COMM_WORLD);
+
     if (myid == 0)
+        start_calc5 = MPI_Wtime(); // Record calc
+    
+    // MARK: ifft on OUT
+    for (row = 0; row < block_size; row++)
     {
-        // Send data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Send(&OUT[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD);
-        }
-
-        // Record calc
-        start_calc5 = MPI_Wtime();
-    }
-    else
-    {
-        MPI_Recv(&OUT[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD, &status);
-        
-    }
-
-    for (row = lower_bound; row < upper_bound; row++)
-    {
-        c_fft1d(OUT[row], N, 1);
+        c_fft1d(buffer1[row], N, 1);
     }
 
     if (myid == 0)
-    {
-        // Record calc
         stop_calc5 = MPI_Wtime();
-                
-        // Recv data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
-        }
-    }
-    else
-    {
-        MPI_Send(&OUT[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
-    }
+    
+    MPI_Gather(&buffer1, block_count, complex_type, OUT, block_count, complex_type, 0, MPI_COMM_WORLD);
 
-    // MARK: OUT 1D-fft 2
     if (myid == 0)
     {
-        // Record calc
-        start_calc6 = MPI_Wtime();
+        start_calc6 = MPI_Wtime(); // Record calc
 
         transpose(OUT);
 
-        // Record calc
         stop_calc6 = MPI_Wtime();
+    }
 
-        // Send data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Send(&OUT[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD);
-        }
+    MPI_Scatter(OUT, block_count, complex_type, &buffer1, block_count, complex_type, 0, MPI_COMM_WORLD);
 
-        // Record calc
+    if (myid == 0)
         start_calc7 = MPI_Wtime();
-    }
-    else
-    {
-        MPI_Recv(&OUT[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD, &status);
-    }
 
-    for (row = lower_bound; row < upper_bound; row++)
+    // MARK: ifft on OUT
+    for (row = 0; row < block_size; row++)
     {
-        c_fft1d(OUT[row], N, 1);
+        c_fft1d(buffer1[row], N, 1);
     }
 
     if (myid == 0)
-    {
-        // Record calc
         stop_calc7 = MPI_Wtime();
-
-        // Recv data
-        for (proc = 1; proc < numprocs; proc++)
-        {
-            MPI_Recv(&OUT[block_size * proc], 1, row_type, proc, tag1, MPI_COMM_WORLD, &status);
-        }
-
-    }
-    else
-    {
-        MPI_Send(&OUT[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
-    }
+    
+    MPI_Gather(&buffer1, block_count, complex_type, OUT, block_count, complex_type, 0, MPI_COMM_WORLD);
 
     // MARK: IO Out
     if (myid == 0)
@@ -459,7 +353,6 @@ int main(int argc, char *argv[])
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Type_free(&row_type);
     MPI_Type_free(&complex_type);
     MPI_Finalize();
     exit(0);

@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     // char image_2[] = "data/test_data/1_im2";
     char image_1[] = "data/2_im1";
     char image_2[] = "data/2_im2";
-    char output[] = "data/results/collective_call";
+    char output[] = "data/results/model3_out2";
 
     // MPI Variables
     int myid, numprocs;
@@ -210,14 +210,6 @@ int main(int argc, char *argv[])
 
     // MARK: Timing 
     double start_t, end_t;
-    double start_calc1, stop_calc1; // First 1D-fft
-    double start_calc2, stop_calc2; // Transpose
-    double start_calc3, stop_calc3; // Second 1D-fft
-    double start_calc4, stop_calc4; // Hadamard product
-    double start_calc5, stop_calc5; // First inverse 1D-fft
-    double start_calc6, stop_calc6; // Transpose
-    double start_calc7, stop_calc7; // Second inverse 1D-fft
-    double start_last_calc;         // Last calc
 
     // MARK: MPI Datatypes
     MPI_Datatype complex_type;
@@ -238,15 +230,12 @@ int main(int argc, char *argv[])
     int tag = 1, tag2 = 2;
     MPI_Status status;
 
-    // testing
-    printf("Old id: %d, New id: %d, My group: %d\n", myid, newid, color);
-
     MPI_Barrier(NEW_COMM);
 
     // MARK: Start
     if (myid == 0)
     {
-        printf("\n2D Convolution\n");
+        printf("2D Convolution\n");
         printf("Computing using task and data parallel model with %d processes\n", numprocs);
         printf("MPI Communicator with %d groups and %d processes per group\n", numprocs / group_size, group_size);
         printf("Starting...\n\n");
@@ -259,6 +248,10 @@ int main(int argc, char *argv[])
         if (newid == 0)
         {
             read_file(image_1, A);
+
+            // Record start time on global rank 0 process
+            start_t = MPI_Wtime();
+
             MPI_Send(A[block_size], 1, row_type, 1, tag, NEW_COMM);
         }
         else
@@ -439,7 +432,6 @@ int main(int argc, char *argv[])
         {
             MPI_Recv(OUT[block_size], 1, row_type, 1, tag, NEW_COMM, &status);
             transpose(OUT);
-            write_file("Test_OUT", OUT);
         }
         else
         {
@@ -447,41 +439,23 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (myid == 0)
+    {
+        // Record end of algo
+        end_t = MPI_Wtime();
 
+        double total_runtime = end_t - start_t;
+
+        printf("Runtime:\t%f sec\n", total_runtime);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // MARK: IO Out
-    // if (myid == 0)
-    // {
-    //     // Record calc
-    //     start_last_calc = MPI_Wtime();
-
-    //     // Transpose OUT
-    //     transpose(OUT);
-
-    //     // Record end of algo
-    //     end_t = MPI_Wtime();
-
-    //     // Write out
-    //     write_file(output, OUT);
-
-    //     // Print out times
-    //     double calc1 = stop_calc1 - start_calc1;
-    //     double calc2 = stop_calc2 - start_calc2;
-    //     double calc3 = stop_calc3 - start_calc3;
-    //     double calc4 = stop_calc4 - start_calc4;
-    //     double calc5 = stop_calc5 - start_calc5;
-    //     double calc6 = stop_calc6 - start_calc6;
-    //     double calc7 = stop_calc7 - start_calc7;
-    //     double last_calc = end_t - start_last_calc;
-
-    //     double total_runtime = end_t - start_t;
-    //     double total_calc_time = calc1 + calc2 + calc3 + calc4 + calc5 + calc6 + calc7 + last_calc;
-    //     double total_comm_time = total_runtime - total_calc_time;
-
-    //     printf("Calc time:\t%f sec\n", total_calc_time);
-    //     printf("Comm time:\t%f sec\n", total_comm_time);
-    //     printf("Runtime:\t%f sec\n", total_runtime);
-    // }
+    if (myid == 6)
+    {
+        // Write out
+        write_file(output, OUT);
+    }
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Type_free(&row_type);

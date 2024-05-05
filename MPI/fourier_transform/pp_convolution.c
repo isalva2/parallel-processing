@@ -128,7 +128,7 @@ void write_file(char path[], complex matrix[N][N])
     fclose(fp);
 }
 
-// MARK: Helper functions
+// MARK: Helper fns
 
 void transpose(complex a[N][N])
 {
@@ -156,27 +156,13 @@ void hadamard_product(complex a[N][N], complex b[N][N], complex out[N][N], int l
     }
 }
 
-// MARK: Debug
-
-void print_matrix(complex matrix[N][N], int id)
-{
-    printf("Matrix: %d\n", id);
-    for (int row = 0; row < N; row++)
-    {
-        for (int col = 0; col < N; col++)
-        {
-            printf("%6.2f;\t", matrix[row][col].r);
-        }
-        printf("\n");
-    }
-}
-
+// MARK: main
 int main(int argc, char *argv[])
 {
     // File paths
-    char image_1[] = "data/1_im1";
-    char image_2[] = "data/1_im2";
-    char output[] = "data/results/experimental_out_1";
+    char image_1[] = "data/2_im1";
+    char image_2[] = "data/2_im2";
+    char output[] = "data/results/model1_out2";
 
     // MPI Variables
     int myid, numprocs;
@@ -207,7 +193,7 @@ int main(int argc, char *argv[])
     double start_last_calc;         // Last calc
 
 
-    // MARK: Custom MPI Datatypes
+    // MARK: MPI Datatypes
     MPI_Datatype complex_type;
     int lengths[2] = {1, 1};
     MPI_Aint offsets[2];
@@ -222,11 +208,11 @@ int main(int argc, char *argv[])
     MPI_Type_vector(block_size, N, N, complex_type, &row_type);
     MPI_Type_commit(&row_type);
 
-    // IO Printout
+    // IO Printout MARK: Start
     if (myid == 0)
     {
         printf("2D Convolution\n");
-        printf("Computing using MPI with %d processes\n", numprocs);
+        printf("Computing using point-to-point SPMD with %d processes\n", numprocs);
         printf("Starting...\n\n");
     }
 
@@ -234,7 +220,7 @@ int main(int argc, char *argv[])
     int tag1= 1, tag2 = 2;
     MPI_Status status;
 
-    // MARK: First 1D-fft on A and B on rows
+    // MARK: fft on A & B
     if (myid == 0)
     {
         // root gets data
@@ -285,7 +271,7 @@ int main(int argc, char *argv[])
         MPI_Send(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD);
     }
 
-    // MARK: Second 1D-fft on transposed A and B (Columns of A and B)
+    // MARK: fft on A & B
     if (myid == 0)
     {
         // Record calc
@@ -338,7 +324,7 @@ int main(int argc, char *argv[])
         MPI_Send(&B[block_size * myid], 1, row_type, 0, tag2, MPI_COMM_WORLD);
     }
 
-    // Mark: Hadamard product on root and transpose from OUT_T to OUT
+    // MARK: Matrix Mult
     MPI_Barrier(MPI_COMM_WORLD);
     if (myid == 0)
     {
@@ -352,7 +338,7 @@ int main(int argc, char *argv[])
         stop_calc4 = MPI_Wtime();
     }
 
-    // MARK: Inverse 1D-fft on rows of OUT
+    // MARK: ifft on OUT
     if (myid == 0)
     {
         // Send data
@@ -391,7 +377,7 @@ int main(int argc, char *argv[])
         MPI_Send(&OUT[block_size * myid], 1, row_type, 0, tag1, MPI_COMM_WORLD);
     }
 
-    // MARK: Second 1D-fft on transposed A and B (Columns of A and B)
+    // MARK: ifft on OUT
     if (myid == 0)
     {
         // Record calc

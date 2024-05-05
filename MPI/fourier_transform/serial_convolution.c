@@ -104,9 +104,6 @@ void c_fft1d(complex *r, int      n, int      isign)
 complex A[N][N], B[N][N];
 complex OUT[N][N];
 
-// Intermediate transpose
-complex A_T[N][N], B_T[N][N], OUT_temp;
-
 #pragma endregion
 #pragma region //IO
 
@@ -115,17 +112,15 @@ void read_data()
     int row, col;
     FILE *A_real, *B_real;
     A_real = fopen("data/test_data/1_im1", "r");
-    B_real = fopen("data/test_data/1_im2", "r");
-    // A_real = fopen("data/2_im1", "r");
-    // B_real = fopen("data/2_im2", "r");
+    B_real = fopen("data/test_data/2_im2", "r");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
         {
             fscanf(A_real, "%f", &A[row][col].r);
             fscanf(B_real, "%f", &B[row][col].r);
-            A[row][col].i = 0.0;
-            B[row][col].i = 0.0;
+            // A[row][col].i = 0.0;
+            // B[row][col].i = 0.0;
         }
     }
     fclose(A_real);
@@ -136,7 +131,7 @@ void write_output()
 {
     int row, col;
     FILE *OUT_real;
-    OUT_real = fopen("results/serial_results/serial_out_1", "w");
+    OUT_real = fopen("serial_test", "w");
     for (row = 0; row < N; row++)
     {
         for (col = 0; col < N; col++)
@@ -147,10 +142,6 @@ void write_output()
     }
     fclose(OUT_real);
 }
-
-#pragma endregion
-#pragma region // Debugging
-
 
 #pragma endregion
 
@@ -173,10 +164,12 @@ int main()
 {
     int row, col;
 
-
+    // Intermediate transpose
+    complex A_T[N][N], B_T[N][N], OUT_temp;
 
     // Read in A and B from memory
     read_data();
+
     // Do fft on rows of A and B
     for (row = 0; row < N; row++)
     {
@@ -191,25 +184,12 @@ int main()
         }
     }
 
-    // // Checking Debug
-    // write_file("serial_B", B);
-    // write_file("serial_A", A);
-
     // Do fft on rows of A_T and B_T (columns of A and B)
     for (row = 0; row < N; row++)
     {
         c_fft1d(A_T[row], N, -1);
         c_fft1d(B_T[row], N, -1);
     }
-
-    // // Checking Debug
-    // debug_write_A_T();
-    // debug_write_OUT();
-    // full_debug_T();
-    // write_file("serial_A_T", A_T);
-    // write_file("serial_A", A_T);
-    // write_file("serial_B", B_T);
-    // write_file("serial_B", B_T);
 
     for (row = 0; row < N; row++)
     {
@@ -221,9 +201,6 @@ int main()
             OUT[col][row].i = A_T[row][col].r * B_T[row][col].i + A_T[row][col].i * B_T[row][col].r;
         }
     }
-    // write_file("serial_OUT", OUT);
-
-    // full_debug();
 
     // IFFT on OUT and store transposed to OUT
     for (row = 0; row < N; row++)
@@ -260,9 +237,7 @@ int main()
     }
 
     // Write out
-    // debug_write_OUT();
-    // full_debug();
-    write_file("OUT_SERIAL", OUT);
+    write_output();
     
     return 0;
 }
