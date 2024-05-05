@@ -1,15 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define N 512
 
-void read_file(char path[], float matrix[N * N])
+void read_file(char path[], double matrix[N * N])
 {
     FILE *fp = fopen(path, "r");
     for (int i  = 0; i < N * N; i++)
     {
-        fscanf(fp, "%f", &matrix[i]);
+        fscanf(fp, "%lg", &matrix[i]);
     }
     fclose(fp);
 }
@@ -22,32 +23,40 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+
     const char *path = "data/results/";
     char *file_name = argv[1];
     char file_path[100];
-
     strcpy(file_path, path);
     strcat(file_path, file_name);
 
-    printf("%s", file_path);
-
-    float y_hat[N * N];
-    read_file(file_path, y_hat);
-    float y[N * N];
+    double yhat[N * N];
+    read_file(file_path, yhat);
+    double y[N * N];
     read_file("data/out_2", y);
 
-    printf("\n");
-    for (int i = 0; i < 10; i++)
-        printf("%6.2f\t", y_hat[i]);
+    printf("Root Mean Square Error of \"%s\"\n\n", file_name);
+    printf("First 5 values of experimental (%s) and actual \"out_2\":\n", file_name);
+    printf("Experimental:\t");
+    for (int i = 0; i < 5; i++)
+        printf("%e\t", yhat[i]);
+    printf("\nActual:\t\t");
+    
+    for (int i = 0; i < 5; i++)
+        printf("%e\t", y[i]);
     printf("\n\n");
-    for (int i = 0; i < 10; i++)
-        printf("%6.2f\t", y[i]);
-    printf("\n\n");
 
+    // RMSE check
+    double square_error = 0.0;
+    double RMSE;
 
+    for (int i = 1; i < N * N; i++)
+    {
+        square_error += pow(yhat[i] - y[i], 2);
+    }
+    RMSE = sqrt(square_error / (N * N));
 
-
-
+    printf("RMSE: %f\n", RMSE);
 
     return 0;
 }
