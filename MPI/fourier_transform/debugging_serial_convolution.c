@@ -209,6 +209,7 @@ int main()
     // write_file("serial_A_T", A_T);
     // write_file("serial_A", A_T);
     // write_file("serial_B", B_T);
+    // write_file("serial_B", B_T);
 
     for (row = 0; row < N; row++)
     {
@@ -261,7 +262,7 @@ int main()
     // Write out
     // debug_write_OUT();
     // full_debug();
-    write_file("OUT_SERIAL",OUT);
+    write_file("OUT_SERIAL", OUT);
     
     return 0;
 }
