@@ -17,7 +17,7 @@ Each MPI models can be compiled using the MPI compiler `mpicc`
 ```bash
 $ mpicc model[1, 2, 3]_[pp, cc, td].c
 ```
-However, some systems will not be able to find the `<math.h>` file, and must be explicitly linked using hte `-lm` flag at the end of the above command.
+However, some systems will not be able to find the `<math.h>` file, and must be explicitly linked using the `-lm` flag at the end of the above command.
 
 The resulting executable can be run by using `mpirun` and specifying the number of desired processes using the `-np` flag.
 
