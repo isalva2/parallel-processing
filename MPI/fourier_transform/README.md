@@ -17,14 +17,13 @@ Each MPI models can be compiled using the MPI compiler `mpicc`
 ```bash
 $ mpicc model[1, 2, 3]_[pp, cc, td].c
 ```
+However, some systems will not be able to find the `<math.h>` file, and must be explicitly linked using hte `-lm` flag at the end of the above command.
 
-and the resulting executable can be run by using `mpirun` and specifying the number of desired processes using the `-np` flag.
+The resulting executable can be run by using `mpirun` and specifying the number of desired processes using the `-np` flag.
 
 ```bash
 $ mpirun -np <processes> ./a.out
 ```
-
-However, some systems will not be able to find the `<math.h>` file, and must be explicitly linked using hte `-lm` flag at the end o the above command.
 
 For convenience, the included shell file `run.sh` compiles each model, runs each model on images `2_im1` and `2_im2`, and checks the RMSE of each model. The shell file can be ran by first changing permissions on the file then executing it.
 
